@@ -1,0 +1,16 @@
+{
+  "itemGroup.mob_controller": "Mob Controller",
+  
+  "item.mob_controller.mob_controller": "Mob Controller",
+  "item.mob_controller.armor_editing_staff": "Armor Editing Staff",
+  
+  "mob_controller.mode.follow": "Following",
+  "mob_controller.mode.stay": "Staying",
+  
+  "mob_controller.error.same_high_health_mob": "Already controlling the same high health mob (%s+ HP)",
+  
+  "mob_controller.tooltip.armor": "Hold and right-click on an entity to edit its armor and inventory.",
+  
+  "jade.mob_owner": "Owner: %s",
+  "config.jade.plugin_mob_controller.mob_owner": "Show Mob Controller Owner"
+}

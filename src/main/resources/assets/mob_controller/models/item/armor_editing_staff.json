@@ -1,0 +1,6 @@
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "mob_controller:item/armor_editing_staff"
+  }
+}
