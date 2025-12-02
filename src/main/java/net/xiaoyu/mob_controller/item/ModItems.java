@@ -12,6 +12,6 @@ public class ModItems {
         () -> new MobControllerItem(new Item.Properties().stacksTo(1)));
         
     // 盔甲编辑杖
-    public static final RegistryObject<Item> ARMOR_EDITING_STAFF = ITEMS.register("armor_editing_staff", 
+    public static final RegistryObject<Item> ARMOR_EDITING_BLUEPRINT = ITEMS.register("armor_editing_blueprint", 
         () -> new MobArmor(new Item.Properties().stacksTo(1)));
 }

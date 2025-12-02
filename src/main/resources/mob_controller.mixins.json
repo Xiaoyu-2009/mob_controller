@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "net.xiaoyu.mob_controller.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "mob_controller.refmap.json",
   "mixins": [
     "MobMixin",
     "WardenMixin",

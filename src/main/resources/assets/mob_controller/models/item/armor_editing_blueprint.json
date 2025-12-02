@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "mob_controller:item/armor_editing_blueprint"
+  }
+}

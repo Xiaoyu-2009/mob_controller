@@ -19,8 +19,8 @@ public class CreativeTab {
             .displayItems((params, output) -> {
                 // 生物控制器
                 output.accept(ModItems.MOB_CONTROLLER_ITEM.get());
-                // 盔甲编辑杖
-                output.accept(ModItems.ARMOR_EDITING_STAFF.get());
+                // 盔甲编辑蓝图
+                output.accept(ModItems.ARMOR_EDITING_BLUEPRINT.get());
             })
             .build());
             
