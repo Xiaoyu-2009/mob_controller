@@ -10,7 +10,6 @@
     "EntityMixin",
     "WitherBossMixin",
     "LivingEntityMixin",
-    "ForgeEventFactoryMixin",
     "PlayerMixin"
   ],
   "client": [

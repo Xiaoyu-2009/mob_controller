@@ -3,12 +3,14 @@ package net.xiaoyu.mob_controller.event;
 import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.event.entity.*;
 import net.minecraftforge.event.entity.living.*;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.xiaoyu.mob_controller.util.*;
@@ -18,6 +20,8 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
 import java.util.*;
+
+import org.jetbrains.annotations.NotNull;
 
 @Mod.EventBusSubscriber
 public class MobControllerEvent {
@@ -32,26 +36,21 @@ public class MobControllerEvent {
         }
     }
     
-    // 被控制的生物你不能破坏方块/包括弹射物
-    /*@SubscribeEvent
-    public static void onMobGriefingCheck(EntityMobGriefingEvent event) {
+    // 被控制的生物不破坏方块/包括弹射物
+    @SubscribeEvent
+    public static void onEntityMobGriefing(@NotNull EntityMobGriefingEvent event) {
         Entity entity = event.getEntity();
 
-        if (entity instanceof Mob) {
-            Mob mob = (Mob) entity;
-
-            if (MobControlledData.isControlledMob(mob)) {
-                event.setResult(EntityMobGriefingEvent.Result.DENY);
-            }
-        } else if (entity instanceof Projectile) {
-            Projectile projectile = (Projectile) entity;
-            Entity owner = projectile.getOwner();
-            
-            if (owner instanceof Mob && MobControlledData.isControlledMob((Mob) owner)) {
-                event.setResult(EntityMobGriefingEvent.Result.DENY);
-            }
+        if (entity instanceof Projectile projectile) {
+            entity = projectile.getOwner();
         }
-    }*/
+        
+        if (entity == null) return;
+
+        if (!(entity instanceof Animal) && entity instanceof Mob mob && MobControlledData.isControlledMob(mob)) {
+            event.setResult(Event.Result.DENY);
+        }
+    }
 
     // 其他生物对被控制的生物中立
     @SubscribeEvent
