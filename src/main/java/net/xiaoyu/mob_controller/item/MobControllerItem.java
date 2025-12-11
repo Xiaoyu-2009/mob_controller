@@ -43,10 +43,10 @@ public class MobControllerItem extends Item {
                 }
 
                 if (MobControlledData.hasPlayerControlledSameHighHealthMob(player.getUUID(), mob)) {
-/*                     MobControlUtil.showMessageToPlayer(
+                    /*MobControlUtil.showMessageToPlayer(
                         player, null, "mob_controller.error.same_high_health_mob", 
                         new Object[]{ MobControlledData.HIGH_HEALTH_THRESHOLD }, ChatFormatting.RED
-                    ); */
+                    );*/
 
                     spawnParticles(mob, false);
                     return InteractionResult.FAIL;

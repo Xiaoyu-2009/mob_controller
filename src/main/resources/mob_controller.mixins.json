@@ -9,7 +9,8 @@
     "WardenMixin",
     "EntityMixin",
     "WitherBossMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "ForgeEventFactoryMixin"
   ],
   "client": [
   ],

@@ -9,7 +9,6 @@ plugins {
 version = "${minecraft_version}-${mod_loader}-${mod_version}"
 group = "${mod_group_id}"
 
-// 禁用测试源集
 sourceSets {
     test {
         java.srcDirs = []
@@ -17,10 +16,8 @@ sourceSets {
     }
 }
 
-// 确保所有任务使用UTF-8编码
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
-    // 禁用所有编译警告
     options.compilerArgs += ["-Xlint:none"]
 }
 
@@ -109,6 +106,7 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
     // Embeddium
     implementation fg.deobf("curse.maven:embeddium-908741:5681725")
 

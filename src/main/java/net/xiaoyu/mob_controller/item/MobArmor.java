@@ -11,6 +11,7 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.xiaoyu.mob_controller.client.GuiHandler;
+import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import java.util.List;
 
@@ -31,7 +32,7 @@ public class MobArmor extends Item {
 
     @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
-        if (target instanceof Mob mob && player instanceof ServerPlayer serverPlayer) {
+        if (target instanceof Mob mob && MobControlledData.isControlledMob(mob) && player instanceof ServerPlayer serverPlayer) {
             GuiHandler.openGuiArmor(serverPlayer, mob);
             return InteractionResult.SUCCESS;
         }

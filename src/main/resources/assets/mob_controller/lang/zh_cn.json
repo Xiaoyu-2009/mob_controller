@@ -11,6 +11,6 @@
   
   "mob_controller.tooltip.armor": "手持时鼠标右键实体以编辑TA的盔甲和物品栏。",
   
-  "jade.mob_owner": "八嘎：%s",
+  "jade.mob_owner": "主人：%s",
   "config.jade.plugin_mob_controller.mob_owner": "显示生物控制器主人"
 }

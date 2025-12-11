@@ -113,7 +113,7 @@ public class MobControlUtil {
                     }
                     
                     // 传送
-                    if (distanceSq > 1024.0D) { // 32格距离
+                    if (distanceSq > 256.0D/* 1024.0D */) { // [32]16格距离
                         BlockPos controllerPos = controller.blockPosition();
                         
                         // 是否要传送到水中??
@@ -159,7 +159,7 @@ public class MobControlUtil {
     }
 
     private static boolean isControllerFullySubmerged(Player controller) {
-        // 控制者头部/身体是否完全在水中??
+        // 控制者头部/身体是否完全在水中
         return controller.isInWater() && 
             controller.level().getFluidState(controller.blockPosition()).getType() == Fluids.WATER && 
             controller.level().getFluidState(controller.blockPosition().above()).getType() == Fluids.WATER;
@@ -176,9 +176,9 @@ public class MobControlUtil {
                     BlockPos checkPos = controllerPos.offset(x, y, z);
                     
                     if (isWater) {
-                        // 是否是水??
+                        // 是否是水
                         if (mob.level().getFluidState(checkPos).getType() == Fluids.WATER) {
-                            // 上方是否也是水??
+                            // 上方是否也是水
                             BlockPos upperPos = checkPos.above();
                             if (mob.level().getFluidState(upperPos).getType() == Fluids.WATER) {
                                 AABB targetAABB = mobAABB.move(
@@ -193,9 +193,9 @@ public class MobControlUtil {
                             }
                         }
                     } else {
-                        // 是否是空气??
+                        // 是否是空气
                         if (mob.level().getBlockState(checkPos).isAir()) {
-                            // 下方是否有可站立的方块??
+                            // 下方是否有可站立的方块
                             BlockPos groundPos = checkPos.below();
                             BlockState groundState = mob.level().getBlockState(groundPos);
                             
@@ -253,8 +253,8 @@ public class MobControlUtil {
             }
         }
 
-/*         // 目标是否有自定义名称且与控制者名称相同
-        if (controllerUUID != null) {
+        // 目标是否有自定义名称且与控制者名称相同
+        /*if (controllerUUID != null) {
             Player targetController = MobControlledData.getController(controlledMob, controlledMob.level());
             
             if (targetController != null) {
@@ -267,7 +267,7 @@ public class MobControlUtil {
                     }
                 }
             }
-        } */
+        }*/
 
         return true;
     }

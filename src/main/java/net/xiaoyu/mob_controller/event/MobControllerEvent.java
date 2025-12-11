@@ -1,9 +1,11 @@
 package net.xiaoyu.mob_controller.event;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.event.entity.*;
 import net.minecraftforge.event.entity.living.*;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
@@ -12,8 +14,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.xiaoyu.mob_controller.util.*;
 import net.xiaoyu.mob_controller.capability.*;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.Entity;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
 import java.util.*;
 
@@ -31,7 +33,7 @@ public class MobControllerEvent {
     }
     
     // 被控制的生物你不能破坏方块/包括弹射物
-    @SubscribeEvent
+    /*@SubscribeEvent
     public static void onMobGriefingCheck(EntityMobGriefingEvent event) {
         Entity entity = event.getEntity();
 
@@ -49,7 +51,7 @@ public class MobControllerEvent {
                 event.setResult(EntityMobGriefingEvent.Result.DENY);
             }
         }
-    }
+    }*/
 
     // 其他生物对被控制的生物中立
     @SubscribeEvent
@@ -218,4 +220,40 @@ public class MobControllerEvent {
             }
         }
     }
+    
+    // 被控制的生物攻击的目标是否已死亡[进行清除目标]
+    @SubscribeEvent
+    public static void onLivingTickCheckTarget(LivingEvent.LivingTickEvent event) {
+        if (event.getEntity() instanceof Mob) {
+            Mob mob = (Mob) event.getEntity();
+            
+            if (MobControlledData.isControlledMob(mob)) {
+                LivingEntity target = mob.getTarget();
+                if (target != null && (target.isDeadOrDying() || !target.isAlive())) {
+                    mob.setTarget(null);
+                    MobControlledData.clearSystemAttack(mob);
+                }
+            }
+        }
+    }
+
+    /*@SubscribeEvent
+    public static void onPlayerRightClickControlledMob(PlayerInteractEvent.EntityInteract event) {
+        Player player = event.getEntity();
+        Entity target = event.getTarget();
+
+        if (target instanceof Mob mob) {
+            if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(player.getUUID())) {
+                if (player.getItemInHand(event.getHand()).is(Items.BEDROCK) && player.isShiftKeyDown()) {
+                    MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
+                    String mobName = mob.getDisplayName().getString();
+
+                    String modeKey = (newMode == MobControlledData.ControlMode.FOLLOW) ?
+                    "mob_controller.mode.follow" : "mob_controller.mode.stay";
+
+                    MobControlUtil.showMessageToPlayer(player, mobName, modeKey, new Object[]{}, ChatFormatting.GOLD);
+                }
+            }
+        }
+    }*/
 }
