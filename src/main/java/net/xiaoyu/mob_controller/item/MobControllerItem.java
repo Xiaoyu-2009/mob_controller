@@ -64,8 +64,7 @@ public class MobControllerItem extends Item {
                 float controlChance = 1.0f;
                 
                 if (!alwaysSuccess) {
-                    float maxHealth = mob.getMaxHealth();
-                    controlChance = calculateControlChance(maxHealth);
+                    controlChance = calculateControlChance(mob);
                 }
 
                 if (level.random.nextFloat() <= controlChance) {
@@ -76,13 +75,23 @@ public class MobControllerItem extends Item {
                 } else {
                     // 控制失败
                     spawnParticles(mob, false);
+                    return InteractionResult.FAIL;
                 }
             }
         }
         return InteractionResult.PASS;
     }
 
-    private float calculateControlChance(float maxHealth) {
+    private float calculateControlChance(Mob mob) {
+        if (mob instanceof TamableAnimal) {
+            TamableAnimal tamable = (TamableAnimal) mob;
+            if (tamable.isTame()) {
+                return 0.0f;
+            }
+        }
+        
+        float maxHealth = mob.getMaxHealth();
+        
         if (maxHealth < 10) {
             return 1.0f;
         } else if (maxHealth <= 50) {
@@ -102,6 +111,7 @@ public class MobControllerItem extends Item {
 
     private void spawnParticles(Mob mob, boolean success) {
         Level level = mob.level();
+        
         if (level.isClientSide) {
             return;
         }
@@ -118,7 +128,6 @@ public class MobControllerItem extends Item {
                 0.1
             );
         }
-
         // 控制失败
         else {
             ((ServerLevel) level).sendParticles(
