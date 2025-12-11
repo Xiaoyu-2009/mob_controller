@@ -60,7 +60,9 @@ public class MobControllerEvent {
             Mob target = (Mob) event.getNewTarget();
 
             if (MobControlledData.isControlledMob(target)) {
-                event.setCanceled(true);
+                if (!MobControlledData.isSystemAttack(target)) {
+                    event.setCanceled(true);
+                }
             }
         }
     }
@@ -71,14 +73,14 @@ public class MobControllerEvent {
         if (event.getEntity() instanceof Mob) {
             Mob mob = (Mob) event.getEntity();
             if (MobControlledData.isControlledMob(mob)) {
-                if (event.getNewTarget() != null) {
+                MobControlledData.clearSystemAttack(mob);
+
+                if (event.getNewTarget() != null && !MobControlledData.isSystemAttack(mob)) {
                     if (!MobControlUtil.canControlledMobAttackTarget(mob, event.getNewTarget())) {
                         event.setCanceled(true);
                         return;
                     }
                 }
-
-                MobControlledData.clearSystemAttack(mob);
             }
         }
     }

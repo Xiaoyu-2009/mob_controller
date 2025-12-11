@@ -124,4 +124,8 @@ public class MobControlledData {
             systemAttackMarker.remove();
         }
     }
+    
+    public static boolean isSystemAttack(Mob mob) {
+        return systemAttackMarker.get() == mob;
+    }
 }
