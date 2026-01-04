@@ -30,7 +30,7 @@ public class MobControlUtil {
                 double distanceSq = controller.distanceToSqr(mob);
                 
                 // 跟随
-                if (distanceSq > 256.0D) { // 16格距离
+                if (distanceSq > 64.0D) { // 8格距离
                     if (mob instanceof Ghast || mob instanceof Vex || mob instanceof Blaze) {
                         // 恶魂/恼鬼/烈焰人
                         mob.getMoveControl().setWantedPosition(controller.getX(), controller.getY() + 2.0D, controller.getZ(), 1.0D);
@@ -113,10 +113,10 @@ public class MobControlUtil {
                     }
                     
                     // 传送
-                    if (distanceSq > 256.0D/* 1024.0D */) { // [32]16格距离
+                    if (distanceSq > 196.0D/* 1024.0D */) { // [32]14格距离
                         BlockPos controllerPos = controller.blockPosition();
                         
-                        // 是否要传送到水中??
+                        // 是否要传送到水中
                         boolean needsWaterTeleport = mob.getMobType() == MobType.WATER;
                         
                         if (needsWaterTeleport) {
@@ -128,7 +128,7 @@ public class MobControlUtil {
                                 }
                             }
                         } else {
-                            // 控制者下方3格为非流体??
+                            // 控制者下方3格为非流体
                             boolean nonFluidBlockFound = false;
                             for (int i = 0; i < 3; i++) {
                                 BlockPos checkPos = controllerPos.below(i + 1);
@@ -272,7 +272,7 @@ public class MobControlUtil {
         return true;
     }
 
-    // 坚守者一些攻击..
+    // 坚守者一些攻击
     public static void setMobTargetWithAnger(Mob mob, LivingEntity target) {
         if (mob instanceof Warden warden) {
             warden.increaseAngerAt(target, AngerLevel.ANGRY.getMinimumAnger() + 20, false);

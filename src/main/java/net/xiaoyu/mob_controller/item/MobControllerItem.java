@@ -70,6 +70,8 @@ public class MobControllerItem extends Item {
                 }
 
                 if (level.random.nextFloat() <= controlChance) {
+                    // 清除仇恨目标
+                    mob.setTarget(null);
                     // 控制成功
                     controlMob(player, mob);
                     spawnParticles(mob, true);
