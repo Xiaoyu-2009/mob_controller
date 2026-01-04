@@ -30,4 +30,22 @@ public class MobMixin {
             MobControlUtil.handleMobFollowing(mob);
         }
     }
+
+    // 被控制的生物/其他生物中立
+    @Inject(method = "setTarget", at = @At("HEAD"), cancellable = true)
+    private void onSetTarget(LivingEntity target, CallbackInfo ci) {
+        Mob mob = (Mob) (Object) this;
+
+        if (MobControlledData.isControlledMob(mob)) {
+            if (!MobControlledData.isSystemAttack(mob)) {
+                ci.cancel();
+            } else {
+                MobControlledData.clearSystemAttack(mob);
+            }
+        } else if (MobControlledData.isControlledEntity(target)) {
+            if (!(mob.getLastHurtByMob() != null && MobControlledData.isControlledEntity(mob.getLastHurtByMob()))) {
+                ci.cancel();
+            }
+        }
+    }
 }

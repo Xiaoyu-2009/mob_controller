@@ -42,6 +42,11 @@ public class MobControllerItem extends Item {
                     return InteractionResult.PASS;
                 }
 
+                if (mob.getHealth() >= 10.0F) {
+                    spawnParticles(mob, false);
+                    return InteractionResult.FAIL;
+                }
+
                 if (MobControlledData.hasPlayerControlledSameHighHealthMob(player.getUUID(), mob)) {
                     /*MobControlUtil.showMessageToPlayer(
                         player, null, "mob_controller.error.same_high_health_mob", 

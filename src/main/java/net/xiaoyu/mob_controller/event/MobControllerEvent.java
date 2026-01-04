@@ -51,38 +51,23 @@ public class MobControllerEvent {
             event.setResult(Event.Result.DENY);
         }
     }
-
-    // 其他生物对被控制的生物中立
-    @SubscribeEvent
-    public static void onLivingChangeTargetNeutral(LivingChangeTargetEvent event) {
-        if (event.getNewTarget() instanceof Mob) {
-            Mob target = (Mob) event.getNewTarget();
-
-            if (MobControlledData.isControlledMob(target)) {
-                if (!MobControlledData.isSystemAttack(target)) {
-                    event.setCanceled(true);
-                }
-            }
-        }
-    }
     
-    // 被控制的生物对其他生物中立
-    @SubscribeEvent
+    // 被控制的生物/其他生物中立
+    /*@SubscribeEvent
     public static void onLivingChangeTarget(LivingChangeTargetEvent event) {
         if (event.getEntity() instanceof Mob) {
             Mob mob = (Mob) event.getEntity();
             if (MobControlledData.isControlledMob(mob)) {
-                MobControlledData.clearSystemAttack(mob);
-
-                if (event.getNewTarget() != null && !MobControlledData.isSystemAttack(mob)) {
-                    if (!MobControlUtil.canControlledMobAttackTarget(mob, event.getNewTarget())) {
-                        event.setCanceled(true);
-                        return;
-                    }
+                if (!MobControlledData.isSystemAttack(mob)) {
+                    event.setCanceled(true);
+                } else {
+                    MobControlledData.clearSystemAttack(mob);
                 }
+            } else if (MobControlledData.isControlledEntity(event.getNewTarget())) {
+                event.setCanceled(true);
             }
         }
-    }
+    }*/
     
     // 被控制的生物离开世界清理
     @SubscribeEvent
@@ -108,8 +93,12 @@ public class MobControllerEvent {
                     long currentTime = mob.level().getGameTime();
                     long lastHealTime = cap.getLastHealTime();
                     
-                    // 每2tick恢复1生命值[没有攻击目标]
-                    if (currentTime - lastHealTime >= 2 && mob.getTarget() == null) {
+                    // 目标为空/死亡
+                    LivingEntity target = mob.getTarget();
+                    boolean hasValidTarget = target != null && target.isAlive() && !target.isDeadOrDying();
+                    
+                    // 每2tick恢复1生命值[没有有效攻击目标]
+                    if (currentTime - lastHealTime >= 2 && !hasValidTarget) {
                         if (mob.getHealth() < mob.getMaxHealth()) {
                             mob.heal(1.0F);
                             cap.setLastHealTime(currentTime);
