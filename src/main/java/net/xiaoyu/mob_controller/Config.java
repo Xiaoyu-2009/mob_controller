@@ -33,7 +33,7 @@ public class Config {
         ALWAYS_SUCCESS = BUILDER
                 .comment("Whether to always succeed in controlling mobs")
                 .define("always_success", false);
-                
+
         BUILDER.pop();
         SPEC = BUILDER.build();
     }

@@ -1,6 +1,7 @@
 package net.xiaoyu.mob_controller.item;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
@@ -57,18 +58,14 @@ public class MobControllerItem extends Item {
                     return InteractionResult.FAIL;
                 }
 
-                ResourceLocation mobId = EntityType.getKey(mob.getType());
-                String mobName = mobId.toString();
-
-                if (Config.BLACKLISTED_MOBS.get().contains(mobName)) {
+                if (Config.BLACKLISTED_MOBS.get().contains(EntityType.getKey(mob.getType()).toString()) || hasOwnerOrTameTag(mob)) {
                     spawnParticles(mob, false);
                     return InteractionResult.FAIL;
                 }
 
-                boolean alwaysSuccess = Config.ALWAYS_SUCCESS.get();
                 float controlChance = 1.0f;
                 
-                if (!alwaysSuccess) {
+                if (!Config.ALWAYS_SUCCESS.get()) {
                     controlChance = calculateControlChance(mob);
                 }
 
@@ -85,6 +82,25 @@ public class MobControllerItem extends Item {
             }
         }
         return InteractionResult.PASS;
+    }
+
+    private boolean hasOwnerOrTameTag(Mob mob) {
+        if (mob instanceof TamableAnimal) {
+            TamableAnimal tamable = (TamableAnimal) mob;
+            if (tamable.isTame()) {
+                return true;
+            }
+        }
+
+        CompoundTag nbt = mob.saveWithoutId(new CompoundTag());
+        if (nbt.contains("Owner") || nbt.contains("OwnerUUID")) {
+            return true;
+        }
+        if (nbt.contains("Tame") && nbt.getBoolean("Tame")) {
+            return true;
+        }
+
+        return false;
     }
 
     private float calculateControlChance(Mob mob) {
