@@ -1,17 +1,19 @@
 package net.xiaoyu.mob_controller.item;
 
+import net.xiaoyu.mob_controller.Config;
+import net.xiaoyu.mob_controller.util.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.world.entity.monster.ElderGuardian;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
-import net.xiaoyu.mob_controller.Config;
-import net.xiaoyu.mob_controller.util.*;
 
 public class MobControllerItem extends Item {
     public MobControllerItem(Properties properties) {
@@ -70,7 +72,7 @@ public class MobControllerItem extends Item {
                 }
 
                 if (level.random.nextFloat() <= controlChance) {
-                    // 清除仇恨目标
+                    // 消除被控制的自身仇恨
                     mob.setTarget(null);
                     // 控制成功
                     controlMob(player, mob);
@@ -130,8 +132,48 @@ public class MobControllerItem extends Item {
 
     private void controlMob(Player player, Mob mob) {
         MobControlledData.addControlledMob(player.getUUID(), mob);
-    }
+        // 消除被控制的生物仇恨
+        if (!mob.level().isClientSide && mob.level() instanceof ServerLevel) {
+            for (Entity entity : mob.level().getEntitiesOfClass(Entity.class, mob.getBoundingBox().inflate(32.0))) {
+                if (entity instanceof Mob nearbyMob && MobControlledData.isControlledMob(nearbyMob)) {
+                    if (nearbyMob instanceof Guardian) {
+                        CompoundTag nbt = nearbyMob.saveWithoutId(new CompoundTag());
 
+                        double x = nearbyMob.getX();
+                        double y = nearbyMob.getY();
+                        double z = nearbyMob.getZ();
+                        float yRot = nearbyMob.getYRot();
+                        float xRot = nearbyMob.getXRot();
+
+                        ServerLevel serverLevel = (ServerLevel) nearbyMob.level();
+
+                        nearbyMob.remove(Entity.RemovalReason.DISCARDED);
+
+                        Mob newMob;
+                        if (nearbyMob instanceof ElderGuardian) {
+                            // 远古守卫者
+                            newMob = new ElderGuardian(EntityType.ELDER_GUARDIAN, serverLevel);
+                        } else {
+                            // 守卫者
+                            newMob = new Guardian(EntityType.GUARDIAN, serverLevel);
+                        }
+
+                        newMob.load(nbt);
+
+                        newMob.setPos(x, y, z);
+                        newMob.setYRot(yRot);
+                        newMob.setXRot(xRot);
+
+                        serverLevel.addFreshEntity(newMob);
+                    } else {
+                        nearbyMob.setTarget(null);
+                        MobControlledData.clearSystemAttack(nearbyMob);
+                    }
+                }
+            }
+        }
+    }
+    
     private void spawnParticles(Mob mob, boolean success) {
         Level level = mob.level();
         
