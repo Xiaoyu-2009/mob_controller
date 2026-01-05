@@ -219,9 +219,18 @@ public class MobControllerEvent {
             
             if (MobControlledData.isControlledMob(mob)) {
                 LivingEntity target = mob.getTarget();
-                if (target != null && (target.isDeadOrDying() || !target.isAlive())) {
-                    mob.setTarget(null);
-                    MobControlledData.clearSystemAttack(mob);
+                
+                // 目标不存在/死亡/不再存活时清除
+                if (target == null || target.isDeadOrDying() || !target.isAlive() || 
+                    !target.level().equals(mob.level()) || target.distanceTo(mob) > 64.0F) {
+                    
+                    if (target != null) {
+                        mob.setTarget(null);
+                    }
+
+                    if (MobControlledData.isSystemAttack(mob)) {
+                        MobControlledData.clearSystemAttack(mob);
+                    }
                 }
             }
         }
