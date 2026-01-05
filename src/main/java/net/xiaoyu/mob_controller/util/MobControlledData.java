@@ -113,19 +113,18 @@ public class MobControlledData {
         return newMode;
     }
 
-    private static final ThreadLocal<Mob> systemAttackMarker = new ThreadLocal<>();
-    
     public static void markSystemAttack(Mob mob) {
-        systemAttackMarker.set(mob);
+        LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
+        capability.ifPresent(cap -> cap.setSystemAttack(true));
     }
     
     public static void clearSystemAttack(Mob mob) {
-        if (systemAttackMarker.get() == mob) {
-            systemAttackMarker.remove();
-        }
+        LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
+        capability.ifPresent(cap -> cap.setSystemAttack(false));
     }
     
     public static boolean isSystemAttack(Mob mob) {
-        return systemAttackMarker.get() == mob;
+        LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
+        return capability.map(MobControlCapability::isSystemAttack).orElse(false);
     }
 }

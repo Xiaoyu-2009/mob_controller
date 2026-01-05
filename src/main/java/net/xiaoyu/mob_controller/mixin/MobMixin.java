@@ -40,7 +40,7 @@ public class MobMixin {
             if (!MobControlledData.isSystemAttack(mob)) {
                 ci.cancel();
             } else {
-                MobControlledData.clearSystemAttack(mob);
+                /*MobControlledData.clearSystemAttack(mob);*/
             }
         } else if (MobControlledData.isControlledEntity(target)) {
             if (!(mob.getLastHurtByMob() != null && MobControlledData.isControlledEntity(mob.getLastHurtByMob()))) {

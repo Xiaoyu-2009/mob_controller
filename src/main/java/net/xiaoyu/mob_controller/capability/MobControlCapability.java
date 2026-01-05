@@ -9,6 +9,7 @@ public class MobControlCapability {
     private UUID controllerUUID = null;
     private MobControlledData.ControlMode controlMode = MobControlledData.ControlMode.FOLLOW;
     private long lastHealTime = 0;
+    private boolean isSystemAttack = false;
     
     public MobControlCapability() {}
 
@@ -40,6 +41,14 @@ public class MobControlCapability {
         this.lastHealTime = time;
     }
     
+    public boolean isSystemAttack() {
+        return isSystemAttack;
+    }
+
+    public void setSystemAttack(boolean systemAttack) {
+        isSystemAttack = systemAttack;
+    }
+    
     public CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();
         if (controllerUUID != null) {
@@ -47,6 +56,7 @@ public class MobControlCapability {
         }
         nbt.putString("ControlMode", controlMode.name());
         nbt.putLong("LastHealTime", lastHealTime);
+        nbt.putBoolean("IsSystemAttack", isSystemAttack);
         return nbt;
     }
     
@@ -64,5 +74,6 @@ public class MobControlCapability {
         }
 
         lastHealTime = nbt.getLong("LastHealTime");
+        isSystemAttack = nbt.getBoolean("IsSystemAttack");
     }
 }
