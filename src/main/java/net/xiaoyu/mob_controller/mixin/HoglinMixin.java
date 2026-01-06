@@ -21,8 +21,7 @@ public class HoglinMixin {
         
         if (MobControlledData.isControlledMob(hoglin)) {
             if (target instanceof Player) {
-                UUID controllerUUID = MobControlledData.getControllerUUID(hoglin);
-                if (controllerUUID != null && target.getUUID().equals(controllerUUID)) {
+                if (target.getUUID().equals(MobControlledData.getControllerUUID(hoglin))) {
                     cir.cancel();
                 }
             }
