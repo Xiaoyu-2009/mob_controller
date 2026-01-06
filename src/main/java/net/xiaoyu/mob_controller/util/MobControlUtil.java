@@ -1,5 +1,6 @@
 package net.xiaoyu.mob_controller.util;
 
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.*;
@@ -8,6 +9,9 @@ import net.minecraft.world.entity.monster.*;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.entity.monster.warden.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.*;
@@ -122,7 +126,7 @@ public class MobControlUtil {
                         if (needsWaterTeleport) {
                             // 控制者是否在水中
                             if (isControllerFullySubmerged(controller)) {
-                                BlockPos safeWaterPos = findSafeWaterPosition(mob, controller);
+                                BlockPos safeWaterPos = findSafePosition(mob, controller, true);
                                 if (safeWaterPos != null) {
                                     teleportMob(mob, safeWaterPos);
                                 }
@@ -141,7 +145,7 @@ public class MobControlUtil {
                             }
                             
                             if (nonFluidBlockFound) {
-                                BlockPos safePos = findSafeAirPosition(mob, controller);
+                                BlockPos safePos = findSafePosition(mob, controller, false);
                                 if (safePos != null) {
                                     teleportMob(mob, safePos);
                                 }
@@ -219,14 +223,6 @@ public class MobControlUtil {
         return null;
     }
 
-    private static BlockPos findSafeWaterPosition(Mob mob, Player controller) {
-        return findSafePosition(mob, controller, true);
-    }
-
-    private static BlockPos findSafeAirPosition(Mob mob, Player controller) {
-        return findSafePosition(mob, controller, false);
-    }
-
     public static boolean canControlledMobAttackTarget(Mob controlledMob, LivingEntity target) {
         Player controller = MobControlledData.getController(controlledMob, controlledMob.level());
         UUID controllerUUID = MobControlledData.getControllerUUID(controlledMob);
@@ -281,7 +277,7 @@ public class MobControlUtil {
             mob.setTarget(target);
         }
     }
-
+    
     // 一些乱七八糟的文本...
     public static void showMessageToPlayer(Player player, String prefix, String translationKey, Object[] args, ChatFormatting color) {
         if (player instanceof ServerPlayer serverPlayer) {

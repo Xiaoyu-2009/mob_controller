@@ -7,8 +7,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.monster.Guardian;
-import net.minecraft.world.entity.monster.ElderGuardian;
+import net.minecraft.world.entity.monster.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
@@ -72,7 +71,6 @@ public class MobControllerItem extends Item {
                 }
 
                 if (level.random.nextFloat() <= controlChance) {
-                    // 消除被控制的自身仇恨
                     mob.setTarget(null);
                     // 控制成功
                     controlMob(player, mob);
@@ -166,14 +164,14 @@ public class MobControllerItem extends Item {
 
                         serverLevel.addFreshEntity(newMob);
                     } else {
-                        nearbyMob.setTarget(null);
+                        mob.setTarget(null);
                         MobControlledData.clearSystemAttack(nearbyMob);
                     }
                 }
             }
         }
     }
-    
+
     private void spawnParticles(Mob mob, boolean success) {
         Level level = mob.level();
         

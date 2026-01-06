@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
+import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Player;
@@ -131,9 +132,10 @@ public class MobControllerEvent {
                         }
                         
                         MobControlledData.markSystemAttack(mob);
-                        if (mob instanceof Hoglin) {
-                            // 疣猪兽用大脑内存模块
-                            Brain<Hoglin> brain = ((Hoglin) mob).getBrain();
+
+                        // 疣猪兽/僵尸疣猪兽用大脑内存模块
+                        if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
+                            Brain<?> brain = mob.getBrain();
                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                             brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, attacker, Long.MAX_VALUE);
                         } else {
@@ -172,9 +174,10 @@ public class MobControllerEvent {
                                         }
                                         
                                         MobControlledData.markSystemAttack(mob);
-                                        if (mob instanceof Hoglin) {
-                                            // 疣猪兽用大脑内存模块
-                                            Brain<Hoglin> brain = ((Hoglin) mob).getBrain();
+
+                                        // 疣猪兽/僵尸疣猪兽用大脑内存模块
+                                        if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
+                                            Brain<?> brain = mob.getBrain();
                                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                                             brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, attacker, Long.MAX_VALUE);
                                         } else {
@@ -217,9 +220,10 @@ public class MobControllerEvent {
                                         }
                                         
                                         MobControlledData.markSystemAttack(mob);
-                                        if (mob instanceof Hoglin) {
-                                            // 疣猪兽用大脑内存模块
-                                            Brain<Hoglin> brain = ((Hoglin) mob).getBrain();
+
+                                        // 疣猪兽/僵尸疣猪兽用大脑内存模块
+                                        if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
+                                            Brain<?> brain = mob.getBrain();
                                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                                             brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, Long.MAX_VALUE);
                                         } else {
@@ -249,13 +253,7 @@ public class MobControllerEvent {
                     !target.level().equals(mob.level()) || target.distanceTo(mob) > 64.0F) {
                     
                     if (target != null) {
-                        if (mob instanceof Hoglin) {
-                            // 疣猪兽用大脑内存模块
-                            Brain<Hoglin> brain = ((Hoglin) mob).getBrain();
-                            brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
-                        } else {
-                            mob.setTarget(null);
-                        }
+                        mob.setTarget(null);
                     }
 
                     if (MobControlledData.isSystemAttack(mob)) {

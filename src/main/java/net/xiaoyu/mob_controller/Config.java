@@ -27,7 +27,9 @@ public class Config {
                     "minecraft:trader_llama",
                     "minecraft:skeleton_horse",
                     "minecraft:zombie_horse",
-                    "minecraft:camel"
+                    "minecraft:camel",
+                    "minecraft:hoglin",
+                    "minecraft:zoglin"
                 ), obj -> obj instanceof String);
 
         ALWAYS_SUCCESS = BUILDER

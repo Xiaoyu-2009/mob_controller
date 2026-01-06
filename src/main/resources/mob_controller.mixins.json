@@ -14,7 +14,10 @@
     "LightningConversionMixin",
     "WaterConversionMixin",
     "ZombieVillagerMixin",
-    "HoglinMixin"
+    "HoglinMixin",
+    "ZoglinMixin",
+    "SlimeMixin",
+    "NearestAttackableTargetGoalMixin"
   ],
   "client": [
   ],
