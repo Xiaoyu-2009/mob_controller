@@ -1,7 +1,7 @@
 package net.xiaoyu.mob_controller.mixin;
 
-import net.minecraft.world.entity.*;
 import net.xiaoyu.mob_controller.util.*;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.monster.*;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;

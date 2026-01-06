@@ -28,7 +28,6 @@ public class Config {
                     "minecraft:skeleton_horse",
                     "minecraft:zombie_horse",
                     "minecraft:camel",
-                    "minecraft:hoglin",
                     "minecraft:zoglin"
                 ), obj -> obj instanceof String);
 

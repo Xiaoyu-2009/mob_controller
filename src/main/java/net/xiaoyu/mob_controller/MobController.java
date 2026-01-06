@@ -11,6 +11,7 @@ import net.xiaoyu.mob_controller.item.ModItems;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityRegister;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
 import net.xiaoyu.mob_controller.client.ClientEvent;
+import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
 
 @Mod(MobController.MOD_ID)
 public class MobController {
@@ -26,5 +27,6 @@ public class MobController {
         MinecraftForge.EVENT_BUS.register(MobControllerEvent.class);
         eventBus.register(MobControlCapabilityRegister.class);
         ClientEvent.register();
+        ToggleControlModePacket.register();
     }
 }

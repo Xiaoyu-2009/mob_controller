@@ -1,10 +1,10 @@
 package net.xiaoyu.mob_controller.mixin;
 
+import net.xiaoyu.mob_controller.util.MobControlledData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.phys.Vec3;
-import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

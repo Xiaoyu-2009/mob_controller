@@ -17,7 +17,9 @@
     "HoglinMixin",
     "ZoglinMixin",
     "SlimeMixin",
-    "NearestAttackableTargetGoalMixin"
+    "NearestAttackableTargetGoalMixin",
+    "PiglinAiMixin",
+    "PiglinBruteAiMixin"
   ],
   "client": [
   ],

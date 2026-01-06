@@ -1,31 +1,35 @@
 package net.xiaoyu.mob_controller.event;
 
+import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
+import net.xiaoyu.mob_controller.util.*;
+import net.xiaoyu.mob_controller.capability.*;
+import net.minecraft.client.Minecraft;
 import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
+import net.minecraft.world.entity.monster.piglin.*;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Items;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.entity.*;
 import net.minecraftforge.event.entity.living.*;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.xiaoyu.mob_controller.util.*;
-import net.xiaoyu.mob_controller.capability.*;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-
-import org.jetbrains.annotations.NotNull;
 
 @Mod.EventBusSubscriber
 public class MobControllerEvent {
@@ -92,14 +96,26 @@ public class MobControllerEvent {
             Mob mob = (Mob) event.getEntity();
 
             if (MobControlledData.isControlledMob(mob)) {
-                LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
-                capability.ifPresent(cap -> {
+                mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
                     long currentTime = mob.level().getGameTime();
                     long lastHealTime = cap.getLastHealTime();
+                    boolean hasValidTarget = false;
                     
-                    // 目标为空/死亡
-                    LivingEntity target = mob.getTarget();
-                    boolean hasValidTarget = target != null && target.isAlive() && !target.isDeadOrDying();
+                    // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
+                    if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
+                        Brain<?> brain = mob.getBrain();
+                        Optional<LivingEntity> attackTarget = brain.getMemory(MemoryModuleType.ATTACK_TARGET);
+                        hasValidTarget = attackTarget.isPresent() && attackTarget.get().isAlive() && !attackTarget.get().isDeadOrDying();
+                    } 
+                    // 猪灵/猪灵蛮兵用ANGRY_AT和ATTACK_TARGET内存模块
+                    else if (mob instanceof AbstractPiglin) {
+                        Brain<?> brain = mob.getBrain();
+                        Optional<LivingEntity> attackTarget = brain.getMemory(MemoryModuleType.ATTACK_TARGET);
+                        hasValidTarget = brain.getMemory(MemoryModuleType.ANGRY_AT).isPresent() && attackTarget.isPresent() && attackTarget.get().isAlive() && !attackTarget.get().isDeadOrDying();
+                    } else {
+                        LivingEntity target = mob.getTarget();
+                        hasValidTarget = target.isAlive() && !target.isDeadOrDying();
+                    }
                     
                     // 每2tick恢复1生命值[没有有效攻击目标]
                     if (currentTime - lastHealTime >= 2 && !hasValidTarget) {
@@ -133,11 +149,16 @@ public class MobControllerEvent {
                         
                         MobControlledData.markSystemAttack(mob);
 
-                        // 疣猪兽/僵尸疣猪兽用大脑内存模块
+                        // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
                         if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
                             Brain<?> brain = mob.getBrain();
                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                             brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, attacker, Long.MAX_VALUE);
+                        } else if (mob instanceof Piglin || mob instanceof PiglinBrute) {
+                            // 猪灵/猪灵蛮兵用ANGRY_AT内存模块
+                            Brain<?> brain = mob.getBrain();
+                            brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+                            brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, attacker.getUUID(), 600L);
                         } else {
                             MobControlUtil.setMobTargetWithAnger(mob, attacker);
                         }
@@ -175,11 +196,16 @@ public class MobControllerEvent {
                                         
                                         MobControlledData.markSystemAttack(mob);
 
-                                        // 疣猪兽/僵尸疣猪兽用大脑内存模块
+                                        // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
                                         if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
                                             Brain<?> brain = mob.getBrain();
                                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                                             brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, attacker, Long.MAX_VALUE);
+                                        } else if (mob instanceof Piglin || mob instanceof PiglinBrute) {
+                                            // 猪灵/猪灵蛮兵用ANGRY_AT内存模块
+                                            Brain<?> brain = mob.getBrain();
+                                            brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+                                            brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, attacker.getUUID(), 600L);
                                         } else {
                                             MobControlUtil.setMobTargetWithAnger(mob, attacker);
                                         }
@@ -221,11 +247,16 @@ public class MobControllerEvent {
                                         
                                         MobControlledData.markSystemAttack(mob);
 
-                                        // 疣猪兽/僵尸疣猪兽用大脑内存模块
+                                        // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
                                         if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
                                             Brain<?> brain = mob.getBrain();
                                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                                             brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, Long.MAX_VALUE);
+                                        } else if (mob instanceof Piglin || mob instanceof PiglinBrute) {
+                                            // 猪灵/猪灵蛮兵用ANGRY_AT内存模块
+                                            Brain<?> brain = mob.getBrain();
+                                            brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+                                            brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, target.getUUID(), 600L);
                                         } else {
                                             MobControlUtil.setMobTargetWithAnger(mob, target);
                                         }
@@ -264,23 +295,18 @@ public class MobControllerEvent {
         }
     }
 
-    /*@SubscribeEvent
-    public static void onPlayerRightClickControlledMob(PlayerInteractEvent.EntityInteract event) {
-        Player player = event.getEntity();
-        Entity target = event.getTarget();
-
-        if (target instanceof Mob mob) {
-            if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(player.getUUID())) {
-                if (player.getItemInHand(event.getHand()).is(Items.BEDROCK) && player.isShiftKeyDown()) {
-                    MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
-                    String mobName = mob.getDisplayName().getString();
-
-                    String modeKey = (newMode == MobControlledData.ControlMode.FOLLOW) ?
-                    "mob_controller.mode.follow" : "mob_controller.mode.stay";
-
-                    MobControlUtil.showMessageToPlayer(player, mobName, modeKey, new Object[]{}, ChatFormatting.GOLD);
+    // 鼠标右键点击切换跟随/停留模式
+    @SubscribeEvent
+    public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Pre event) {
+        if (event.getAction() == 1) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.hitResult instanceof EntityHitResult entityHitResult) {
+                if (entityHitResult.getEntity() instanceof Mob mob) {
+                    ToggleControlModePacket.INSTANCE.sendToServer(
+                        new ToggleControlModePacket(mob.getId())
+                    );
                 }
             }
         }
-    }*/
+    }
 }

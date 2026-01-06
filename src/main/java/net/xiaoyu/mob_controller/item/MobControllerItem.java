@@ -26,19 +26,18 @@ public class MobControllerItem extends Item {
             Level level = player.level();
 
             if (!level.isClientSide) {
-                if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(player.getUUID())) {
+                /*if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(player.getUUID())) {
                     if (player.isShiftKeyDown()) {
                         MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
                         String mobName = mob.getDisplayName().getString();
 
-                        String modeKey = (newMode == MobControlledData.ControlMode.FOLLOW) ? 
-                        "mob_controller.mode.follow" : "mob_controller.mode.stay";
+                        String modeKey = (newMode == MobControlledData.ControlMode.FOLLOW) ? "mob_controller.mode.follow" : "mob_controller.mode.stay";
 
                         MobControlUtil.showMessageToPlayer(player, mobName, modeKey, new Object[]{}, ChatFormatting.GOLD);
                         
                         return InteractionResult.SUCCESS;
                     }
-                }
+                }*/
 
                 if (MobControlledData.isControlledMob(mob)) {
                     return InteractionResult.PASS;
