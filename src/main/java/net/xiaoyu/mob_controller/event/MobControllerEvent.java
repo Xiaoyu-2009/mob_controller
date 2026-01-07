@@ -1,5 +1,6 @@
 package net.xiaoyu.mob_controller.event;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.xiaoyu.mob_controller.util.*;
 import net.xiaoyu.mob_controller.capability.*;
 import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
@@ -294,13 +295,17 @@ public class MobControllerEvent {
 
     // 鼠标右键点击切换跟随/停留模式
     @SubscribeEvent
-    public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Pre event) {
-        if (event.getAction() == 1) {
-            if (Minecraft.getInstance().hitResult instanceof EntityHitResult entityHitResult) {
+    public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+
+        if (event.getButton() == InputConstants.MOUSE_BUTTON_RIGHT && event.getAction() == InputConstants.RELEASE) {
+            if (mc.hitResult instanceof EntityHitResult entityHitResult) {
                 if (entityHitResult.getEntity() instanceof Mob mob) {
-                    ToggleControlModePacket.INSTANCE.sendToServer(
-                        new ToggleControlModePacket(mob.getId())
-                    );
+                    if (mc.screen == null) {
+                        ToggleControlModePacket.INSTANCE.sendToServer(
+                            new ToggleControlModePacket(mob.getId())
+                        );
+                    }
                 }
             }
         }
