@@ -1,12 +1,10 @@
 package net.xiaoyu.mob_controller.event;
 
-import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
 import net.xiaoyu.mob_controller.util.*;
 import net.xiaoyu.mob_controller.capability.*;
+import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
 import net.minecraft.client.Minecraft;
-import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.animal.Animal;
@@ -26,7 +24,6 @@ import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -114,7 +111,7 @@ public class MobControllerEvent {
                         hasValidTarget = brain.getMemory(MemoryModuleType.ANGRY_AT).isPresent() && attackTarget.isPresent() && attackTarget.get().isAlive() && !attackTarget.get().isDeadOrDying();
                     } else {
                         LivingEntity target = mob.getTarget();
-                        hasValidTarget = target.isAlive() && !target.isDeadOrDying();
+                        hasValidTarget = target != null && target.isAlive() && !target.isDeadOrDying();
                     }
                     
                     // 每2tick恢复1生命值[没有有效攻击目标]
@@ -299,8 +296,7 @@ public class MobControllerEvent {
     @SubscribeEvent
     public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Pre event) {
         if (event.getAction() == 1) {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.hitResult instanceof EntityHitResult entityHitResult) {
+            if (Minecraft.getInstance().hitResult instanceof EntityHitResult entityHitResult) {
                 if (entityHitResult.getEntity() instanceof Mob mob) {
                     ToggleControlModePacket.INSTANCE.sendToServer(
                         new ToggleControlModePacket(mob.getId())

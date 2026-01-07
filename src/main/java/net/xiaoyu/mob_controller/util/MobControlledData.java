@@ -1,11 +1,11 @@
 package net.xiaoyu.mob_controller.util;
 
+import net.xiaoyu.mob_controller.capability.*;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.common.util.LazyOptional;
-import net.xiaoyu.mob_controller.capability.*;
 
 import java.util.*;
 import java.util.concurrent.*;

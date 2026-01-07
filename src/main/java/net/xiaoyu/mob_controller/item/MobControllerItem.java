@@ -8,6 +8,8 @@ import net.minecraft.world.*;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.monster.*;
+import net.minecraft.world.entity.monster.hoglin.Hoglin;
+import net.minecraft.world.entity.monster.piglin.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
@@ -100,6 +102,9 @@ public class MobControllerItem extends Item {
         if (nbt.contains("Tame") && nbt.getBoolean("Tame")) {
             return true;
         }
+        if (mob instanceof TamableAnimal) {
+            return true;
+        }
 
         return false;
     }
@@ -129,7 +134,7 @@ public class MobControllerItem extends Item {
 
     private void controlMob(Player player, Mob mob) {
         MobControlledData.addControlledMob(player.getUUID(), mob);
-        // 消除被控制的生物仇恨
+        // 消除被控制的生物仇恨(32格内)
         if (!mob.level().isClientSide && mob.level() instanceof ServerLevel) {
             for (Entity entity : mob.level().getEntitiesOfClass(Entity.class, mob.getBoundingBox().inflate(32.0))) {
                 if (entity instanceof Mob nearbyMob && MobControlledData.isControlledMob(nearbyMob)) {
@@ -150,6 +155,18 @@ public class MobControllerItem extends Item {
                         if (nearbyMob instanceof ElderGuardian) {
                             // 远古守卫者
                             newMob = new ElderGuardian(EntityType.ELDER_GUARDIAN, serverLevel);
+                        } else if (nearbyMob instanceof Hoglin) {
+                            // 疣猪兽
+                            newMob = new Hoglin(EntityType.HOGLIN, serverLevel);
+                        } else if (nearbyMob instanceof Piglin) {
+                            // 猪灵
+                            newMob = new Piglin(EntityType.PIGLIN, serverLevel);
+                        } else if (nearbyMob instanceof PiglinBrute) {
+                            // 猪灵蛮兵
+                            newMob = new PiglinBrute(EntityType.PIGLIN_BRUTE, serverLevel);
+                        } else if (nearbyMob instanceof Slime) {
+                            // 史莱姆
+                            newMob = new Slime(EntityType.SLIME, serverLevel);
                         } else {
                             // 守卫者
                             newMob = new Guardian(EntityType.GUARDIAN, serverLevel);
