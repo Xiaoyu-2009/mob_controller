@@ -1,24 +1,40 @@
 package net.xiaoyu.mob_controller.util;
 
-import net.xiaoyu.mob_controller.capability.*;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.common.util.LazyOptional;
+import net.xiaoyu.mob_controller.capability.MobControlCapability;
+import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MobControlledData {
-    private static final Map<UUID, Set<EntityType<?>>> playerControlledHighHealthMobs = new ConcurrentHashMap<>();
+    private static final Map<UUID, Set<EntityType<?>>> PLAYER_CONTROLLED_HIGH_HEALTH_MOBS = new ConcurrentHashMap<>();
     public static final int HIGH_HEALTH_THRESHOLD = 150;
-    
+
     public enum ControlMode {
-        FOLLOW, // 跟随
-        STAY, // 停留
+        /**
+         * 跟随
+         */
+        FOLLOW,
+        /**
+         * 停留
+         */
+        STAY,
+        /**
+         * 游荡
+         * TODO: 尚未实现
+         */
+        WANDER,
     }
-    
+
     public static void addControlledMob(UUID controllerUUID, Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> {
@@ -31,7 +47,7 @@ public class MobControlledData {
         mob.setCanPickUpLoot(false);
 
         if (isHighHealthMob(mob)) {
-            playerControlledHighHealthMobs.computeIfAbsent(controllerUUID, k -> new HashSet<>()).add(mob.getType());
+            PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.computeIfAbsent(controllerUUID, k -> new HashSet<>()).add(mob.getType());
         }
     }
 
@@ -43,38 +59,35 @@ public class MobControlledData {
         if (!isHighHealthMob(mob)) {
             return false;
         }
-        
-        Set<EntityType<?>> controlledMobs = playerControlledHighHealthMobs.get(playerUUID);
+
+        Set<EntityType<?>> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(playerUUID);
         return controlledMobs != null && controlledMobs.contains(mob.getType());
     }
-    
+
     // 列表中移除[被控制的生物死亡]
     public static void removeControlledMobOnDeath(Mob mob) {
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID != null && isHighHealthMob(mob)) {
-            Set<EntityType<?>> controlledMobs = playerControlledHighHealthMobs.get(controllerUUID);
+            Set<EntityType<?>> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(controllerUUID);
             if (controlledMobs != null) {
                 controlledMobs.remove(mob.getType());
                 if (controlledMobs.isEmpty()) {
-                    playerControlledHighHealthMobs.remove(controllerUUID);
+                    PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.remove(controllerUUID);
                 }
             }
         }
     }
-    
+
     public static boolean isControlledMob(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isControlled).orElse(false);
     }
-    
+
     public static UUID getControllerUUID(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
-        return capability.map(cap -> {
-            UUID uuid = cap.getControllerUUID();
-            return uuid;
-        }).orElse(null);
+        return capability.map(MobControlCapability::getControllerUUID).orElse(null);
     }
-    
+
     public static Player getController(Mob mob, Level level) {
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID != null) {
@@ -87,12 +100,12 @@ public class MobControlledData {
 
         return null;
     }
-    
+
     public static boolean isControlledEntity(LivingEntity entity) {
         if (entity instanceof Mob) {
             return isControlledMob((Mob) entity);
         }
-        
+
         return false;
     }
 
@@ -117,12 +130,12 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setSystemAttack(true));
     }
-    
+
     public static void clearSystemAttack(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setSystemAttack(false));
     }
-    
+
     public static boolean isSystemAttack(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isSystemAttack).orElse(false);

@@ -1,10 +1,14 @@
 package net.xiaoyu.mob_controller.mixin;
 
-import net.xiaoyu.mob_controller.util.*;
-import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.monster.*;
-import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.world.entity.monster.Skeleton;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
+import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.xiaoyu.mob_controller.entity.IControllableEntity;
+import net.xiaoyu.mob_controller.util.MobControlUtil;
+import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -45,12 +49,24 @@ public class MobMixin {
 
         if (MobControlledData.isControlledMob(mob)) {
             if (!MobControlledData.isSystemAttack(mob)) {
+                if (mob instanceof IControllableEntity controllable) {
+                    if (!controllable.canSeeAsTarget(target)) {
+                        ci.cancel();
+                    }
+                    return;
+                }
                 ci.cancel();
             } else {
                 /*MobControlledData.clearSystemAttack(mob);*/
             }
         } else if (MobControlledData.isControlledEntity(target)) {
             if (!(mob.getLastHurtByMob() != null && MobControlledData.isControlledEntity(mob.getLastHurtByMob()))) {
+                if (mob instanceof IControllableEntity controllable) {
+                    if (!controllable.canSeeAsTarget(target)) {
+                        ci.cancel();
+                    }
+                    return;
+                }
                 ci.cancel();
             }
         }
@@ -61,8 +77,7 @@ public class MobMixin {
     private void onSetTargetForGuardian(LivingEntity target, CallbackInfo ci) {
         Mob mob = (Mob) (Object) this;
 
-        if (mob instanceof Guardian) {
-            Guardian guardian = (Guardian) mob;
+        if (mob instanceof Guardian guardian) {
 
             if (MobControlledData.isControlledMob(guardian) && target == null) {
                 LivingEntity currentTarget = guardian.getTarget();

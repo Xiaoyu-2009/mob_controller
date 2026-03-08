@@ -1,24 +1,26 @@
 package net.xiaoyu.mob_controller.mixin;
 
-import net.xiaoyu.mob_controller.util.MobControlledData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.monster.piglin.*;
+import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.minecraft.world.entity.monster.piglin.PiglinBrute;
+import net.minecraft.world.entity.monster.piglin.PiglinBruteAi;
 import net.minecraft.world.entity.player.Player;
+import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.*;
+import java.util.Optional;
+import java.util.UUID;
 
-@Mixin(targets = "net.minecraft.world.entity.monster.piglin.PiglinBruteAi")
+@Mixin(PiglinBruteAi.class)
 public class PiglinBruteAiMixin {
-
     // 被控制的猪灵蛮兵寻找目标行为
-    @Inject(method = "findNearestValidAttackTarget", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "findNearestValidAttackTarget", at = @At("HEAD"))
     private static void excludeOwnerFromTargeting(AbstractPiglin piglin, CallbackInfoReturnable<Optional<? extends LivingEntity>> cir) {
         PiglinBrute brute = (PiglinBrute) piglin;
         if (MobControlledData.isControlledMob(brute)) {
