@@ -1,6 +1,7 @@
 package net.xiaoyu.mob_controller.entity;
 
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -22,6 +23,7 @@ import net.xiaoyu.mob_controller.capability.MobControlCapability;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 import net.xiaoyu.mob_controller.entity.ai.goal.GoalNearestHealableTarget;
 import net.xiaoyu.mob_controller.mixin.AccessorWitch;
+import net.xiaoyu.mob_controller.registry.ModEffects;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
@@ -67,10 +69,13 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
             Potion potion = Potions.HARMING;
             if (this.isSameTeam(target)) {
                 if (target.getHealth() <= 4.0F || target.hasEffect(MobEffects.REGENERATION)) {
-                    // TODO: 新效果
-                    potion = Potions.HEALING;
+                    potion = ModEffects.SPECIAL_HEALING.get();
                 } else {
                     potion = Potions.REGENERATION;
+                }
+                boolean isOnFire = target.isOnFire() || target.getLastDamageSource() != null && target.getLastDamageSource().is(DamageTypeTags.IS_FIRE);
+                if (isOnFire && !target.hasEffect(MobEffects.FIRE_RESISTANCE)) {
+                    potion = Potions.LONG_FIRE_RESISTANCE;
                 }
                 this.setTarget(null);
             } else if (d3 >= 8.0D && !target.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {

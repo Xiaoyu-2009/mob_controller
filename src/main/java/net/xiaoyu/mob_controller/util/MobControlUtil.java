@@ -1,38 +1,45 @@
 package net.xiaoyu.mob_controller.util;
 
-import com.google.common.collect.ImmutableList;
-import net.minecraft.core.*;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.animal.*;
-import net.minecraft.world.entity.monster.*;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobType;
+import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ambient.Bat;
-import net.minecraft.world.entity.monster.warden.*;
+import net.minecraft.world.entity.animal.Squid;
+import net.minecraft.world.entity.monster.Blaze;
+import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.monster.Phantom;
+import net.minecraft.world.entity.monster.Vex;
+import net.minecraft.world.entity.monster.warden.AngerLevel;
+import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.ai.Brain;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.phys.*;
-import net.minecraft.network.chat.*;
-import net.minecraft.ChatFormatting;
-import net.minecraft.locale.Language;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.xiaoyu.mob_controller.mixin.AccessorSlimeMoveControl;
 
-import java.util.*;
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.util.UUID;
 
 public class MobControlUtil {
     public static void handleMobFollowing(Mob mob) {
-        
+
         if (MobControlledData.isControlledMob(mob)) {
             Player controller = MobControlledData.getController(mob, mob.level());
 
             if (controller != null && !controller.isSpectator()) {
                 mob.getLookControl().setLookAt(controller, 10.0F, (float) mob.getMaxHeadXRot());
-                
+
                 double distanceSq = controller.distanceToSqr(mob);
-                
+
                 // 跟随
                 if (distanceSq > 64.0D) { // 8格距离
                     if (mob instanceof Ghast || mob instanceof Vex || mob instanceof Blaze) {
@@ -42,51 +49,49 @@ public class MobControlUtil {
                         // 凋零
                         WitherBoss wither = (WitherBoss) mob;
                         wither.getMoveControl().setWantedPosition(controller.getX(), controller.getY() + 2.0D, controller.getZ(), 1.0D);
-                    } */ else if (mob instanceof Phantom) {
+                    } */ else if (mob instanceof Phantom phantom) {
                         // 幻翼
-                        Phantom phantom = (Phantom) mob;
                         phantom.setTarget(controller);
 
                         try {
                             Field attackPhaseField = Phantom.class.getDeclaredField("attackPhase");
                             attackPhaseField.setAccessible(true);
-                            
+
                             Class<?> attackPhaseClass = Class.forName("net.minecraft.world.entity.monster.Phantom$AttackPhase");
                             Object[] attackPhaseConstants = attackPhaseClass.getEnumConstants();
-                            
+
                             for (Object constant : attackPhaseConstants) {
-                                if (constant.toString().equals("SWOOP")) {
+                                if ("SWOOP".equals(constant.toString())) {
                                     attackPhaseField.set(phantom, constant);
                                     break;
                                 }
                             }
-                        } catch (Exception e) {}
+                        } catch (Exception e) {
+                        }
 
                         try {
                             Field moveTargetPointField = Phantom.class.getDeclaredField("moveTargetPoint");
                             moveTargetPointField.setAccessible(true);
 
                             moveTargetPointField.set(phantom, new Vec3(controller.getX(), controller.getY() + 1.0D, controller.getZ()));
-                        } catch (Exception e) {}
-                    } else if (mob instanceof Squid) {
+                        } catch (Exception e) {
+                        }
+                    } else if (mob instanceof Squid squid) {
                         // 鱿鱼
                         Vec3 direction = new Vec3(
-                            controller.getX() - mob.getX(),
-                            controller.getY() - mob.getY(),
-                            controller.getZ() - mob.getZ()
+                                controller.getX() - mob.getX(),
+                                controller.getY() - mob.getY(),
+                                controller.getZ() - mob.getZ()
                         ).normalize();
-                        
-                        Squid squid = (Squid) mob;
 
                         squid.setMovementVector(
-                            (float) (direction.x * 0.2F),
-                            (float) (direction.y * 0.2F),
-                            (float) (direction.z * 0.2F)
+                                (float) (direction.x * 0.2F),
+                                (float) (direction.y * 0.2F),
+                                (float) (direction.z * 0.2F)
                         );
-                    } else if (mob instanceof Bat) {
+                    } else if (mob instanceof Bat bat) {
                         // 蝙蝠
-                        Bat bat = (Bat) mob;
-                        
+
                         if (bat.isResting()) {
                             bat.setResting(false);
                         }
@@ -94,13 +99,14 @@ public class MobControlUtil {
                         try {
                             Field targetPositionField = Bat.class.getDeclaredField("targetPosition");
                             targetPositionField.setAccessible(true);
-                            
+
                             targetPositionField.set(bat, new BlockPos(
-                                (int) controller.getX(),
-                                (int) controller.getY() + 2,
-                                (int) controller.getZ()
+                                    (int) controller.getX(),
+                                    (int) controller.getY() + 2,
+                                    (int) controller.getZ()
                             ));
-                        } catch (Exception e) {}
+                        } catch (Exception e) {
+                        }
                     }/*  else if (mob instanceof Bee) {
                         // 蜜蜂
                         Bee bee = (Bee) mob;
@@ -113,16 +119,20 @@ public class MobControlUtil {
                         } catch (Exception e) {}
                     } */ else {
                         // 一般的生物...
+                        mob.lookAt(controller, 10.0F, 10.0F);
                         mob.getNavigation().moveTo(controller, 1.0D);
+                        if (mob.getMoveControl() instanceof AccessorSlimeMoveControl slimeMoveControl) {
+                            slimeMoveControl.mob_controller$setDirection(mob.getYRot(), true);
+                        }
                     }
-                    
+
                     // 传送
                     if (distanceSq > 196.0D/* 1024.0D */) { // [32]14格距离
                         BlockPos controllerPos = controller.blockPosition();
-                        
+
                         // 是否要传送到水中
-                        boolean needsWaterTeleport = mob.getMobType() == MobType.WATER;
-                        
+                        boolean needsWaterTeleport = mob.getMobType().equals(MobType.WATER);
+
                         if (needsWaterTeleport) {
                             // 控制者是否在水中
                             if (isControllerFullySubmerged(controller)) {
@@ -137,13 +147,13 @@ public class MobControlUtil {
                             for (int i = 0; i < 3; i++) {
                                 BlockPos checkPos = controllerPos.below(i + 1);
                                 BlockState state = mob.level().getBlockState(checkPos);
-                                
-                                if (state.getFluidState().getType() == Fluids.EMPTY) {
+
+                                if (state.getFluidState().getType().equals(Fluids.EMPTY)) {
                                     nonFluidBlockFound = true;
                                     break;
                                 }
                             }
-                            
+
                             if (nonFluidBlockFound) {
                                 BlockPos safePos = findSafePosition(mob, controller, false);
                                 if (safePos != null) {
@@ -156,7 +166,7 @@ public class MobControlUtil {
             }
         }
     }
-    
+
     private static void teleportMob(Mob mob, BlockPos pos) {
         mob.moveTo(pos, mob.getYRot(), mob.getXRot());
         mob.getNavigation().stop();
@@ -164,33 +174,33 @@ public class MobControlUtil {
 
     private static boolean isControllerFullySubmerged(Player controller) {
         // 控制者头部/身体是否完全在水中
-        return controller.isInWater() && 
-            controller.level().getFluidState(controller.blockPosition()).getType() == Fluids.WATER && 
-            controller.level().getFluidState(controller.blockPosition().above()).getType() == Fluids.WATER;
+        return controller.isInWater() &&
+                controller.level().getFluidState(controller.blockPosition()).getType().equals(Fluids.WATER) &&
+                controller.level().getFluidState(controller.blockPosition().above()).getType().equals(Fluids.WATER);
     }
 
     private static BlockPos findSafePosition(Mob mob, Player controller, boolean isWater) {
         AABB mobAABB = mob.getBoundingBox();
         BlockPos controllerPos = controller.blockPosition();
-        
+
         // 7x7x7范围内
         for (int x = -3; x <= 3; x++) {
             for (int y = -3; y <= 3; y++) {
                 for (int z = -3; z <= 3; z++) {
                     BlockPos checkPos = controllerPos.offset(x, y, z);
-                    
+
                     if (isWater) {
                         // 是否是水
-                        if (mob.level().getFluidState(checkPos).getType() == Fluids.WATER) {
+                        if (mob.level().getFluidState(checkPos).getType().equals(Fluids.WATER)) {
                             // 上方是否也是水
                             BlockPos upperPos = checkPos.above();
-                            if (mob.level().getFluidState(upperPos).getType() == Fluids.WATER) {
+                            if (mob.level().getFluidState(upperPos).getType().equals(Fluids.WATER)) {
                                 AABB targetAABB = mobAABB.move(
-                                    checkPos.getX() - mobAABB.minX, 
-                                    checkPos.getY() - mobAABB.minY, 
-                                    checkPos.getZ() - mobAABB.minZ
+                                        checkPos.getX() - mobAABB.minX,
+                                        checkPos.getY() - mobAABB.minY,
+                                        checkPos.getZ() - mobAABB.minZ
                                 );
-                                
+
                                 if (mob.level().noCollision(mob, targetAABB)) {
                                     return checkPos;
                                 }
@@ -202,12 +212,12 @@ public class MobControlUtil {
                             // 下方是否有可站立的方块
                             BlockPos groundPos = checkPos.below();
                             BlockState groundState = mob.level().getBlockState(groundPos);
-                            
+
                             if (groundState.isFaceSturdy(mob.level(), groundPos, Direction.UP)) {
                                 AABB targetAABB = mobAABB.move(
-                                    checkPos.getX() - mobAABB.minX, 
-                                    checkPos.getY() - mobAABB.minY, 
-                                    checkPos.getZ() - mobAABB.minZ
+                                        checkPos.getX() - mobAABB.minX,
+                                        checkPos.getY() - mobAABB.minY,
+                                        checkPos.getZ() - mobAABB.minZ
                                 );
 
                                 if (mob.level().noCollision(mob, targetAABB)) {
@@ -219,33 +229,32 @@ public class MobControlUtil {
                 }
             }
         }
-        
+
         return null;
     }
 
     public static boolean canControlledMobAttackTarget(Mob controlledMob, LivingEntity target) {
+        if (!MobControlledData.isControlledEntity(controlledMob)) {
+            return false;
+        }
+        if (target instanceof Mob mob && MobControlledData.isControlledEntity(mob)
+                && MobControlledData.getControllerUUID(controlledMob).equals(MobControlledData.getControllerUUID(mob))) {
+            return false;
+        }
+
         Player controller = MobControlledData.getController(controlledMob, controlledMob.level());
         UUID controllerUUID = MobControlledData.getControllerUUID(controlledMob);
 
-        // 目标是否是被控制的生物
-        if (MobControlledData.isControlledEntity(target)) {
-            return false;
-        }
-        
         // 目标是否是控制者
-        if (controller != null && target.equals(controller)) {
+        if (target.equals(controller)) {
             return false;
         }
-        
+
         // 目标是否是控制者的宠物
-        if (target instanceof TamableAnimal) {
-            TamableAnimal tamableTarget = (TamableAnimal) target;
-            
+        if (target instanceof OwnableEntity ownable) {
             if (controllerUUID != null) {
-                LivingEntity owner = tamableTarget.getOwner();
-                if (owner != null && owner.getUUID().equals(controllerUUID)) {
-                    return false;
-                }
+                LivingEntity owner = ownable.getOwner();
+                return owner == null || !owner.getUUID().equals(controllerUUID);
             }
         }
 
@@ -277,7 +286,7 @@ public class MobControlUtil {
             mob.setTarget(target);
         }
     }
-    
+
     // 一些乱七八糟的文本...
     public static void showMessageToPlayer(Player player, String prefix, String translationKey, Object[] args, ChatFormatting color) {
         if (player instanceof ServerPlayer serverPlayer) {
@@ -285,9 +294,9 @@ public class MobControlUtil {
             String formattedText = args.length > 0 ? String.format(text, args) : text;
 
             String messageText = (prefix != null && !prefix.isEmpty()) ? prefix + " " + formattedText : formattedText;
-            
+
             Component message = Component.literal(messageText).setStyle(Style.EMPTY.withColor(color));
-            
+
             serverPlayer.sendSystemMessage(message, true);
         }
     }

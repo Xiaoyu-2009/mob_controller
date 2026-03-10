@@ -1,16 +1,12 @@
 {
-  "itemGroup.mob_controller": "生物控制器",
-  
-  "item.mob_controller.mob_controller": "生物控制器",
+  "config.jade.plugin_mob_controller.mob_owner": "显示生物控制器主人",
   "item.mob_controller.armor_editing_blueprint": "盔甲编辑蓝图",
-  
+  "item.mob_controller.mob_controller": "生物控制器",
+  "itemGroup.mob_controller": "生物控制器",
+  "jade.mob_owner": "主人：%s",
+  "mob_controller.error.same_high_health_mob": "已有同种生命值 %s 以上的生物被控制",
   "mob_controller.mode.follow": "跟随中",
   "mob_controller.mode.stay": "停留中",
-  
-  "mob_controller.error.same_high_health_mob": "已有同种生命值 %s 以上的生物被控制",
-  
-  "mob_controller.tooltip.armor": "手持时鼠标右键实体以编辑TA的盔甲和物品栏。",
-  
-  "jade.mob_owner": "主人：%s",
-  "config.jade.plugin_mob_controller.mob_owner": "显示生物控制器主人"
+  "mob_controller.mode.wander": "游荡中",
+  "mob_controller.tooltip.armor": "手持时鼠标右键实体以编辑TA的盔甲和物品栏。"
 }

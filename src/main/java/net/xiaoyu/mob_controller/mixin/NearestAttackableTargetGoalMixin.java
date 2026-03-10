@@ -1,28 +1,35 @@
-//package net.xiaoyu.mob_controller.mixin;
-//
-//import net.xiaoyu.mob_controller.util.MobControlledData;
-//import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
-//import net.minecraft.world.entity.player.Player;
-//import org.spongepowered.asm.mixin.Mixin;
-//import org.spongepowered.asm.mixin.injection.*;
-//import org.spongepowered.asm.mixin.injection.callback.*;
-//
-//@Mixin(NearestAttackableTargetGoal.class)
-//public class NearestAttackableTargetGoalMixin {
-//
-//    // 被控制的史莱姆不攻击主人
-//    @Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
-//    private void excludeOwnerFromTargeting(CallbackInfoReturnable<Boolean> cir) {
-//        NearestAttackableTargetGoal<?> instance = (NearestAttackableTargetGoal<?>) (Object) this;
-//
-//        if (MobControlledData.isControlledMob(instance.mob)) {
-//            if (instance.target instanceof Player) {
-//                Player player = (Player) instance.target;
-//
-//                if (player.getUUID().equals(MobControlledData.getControllerUUID(instance.mob))) {
-//                    cir.cancel();
-//                }
-//            }
-//        }
-//    }
-//}
+package net.xiaoyu.mob_controller.mixin;
+
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.xiaoyu.mob_controller.entity.IControllableEntity;
+import net.xiaoyu.mob_controller.util.MobControlledData;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+
+import javax.annotation.Nullable;
+import java.util.function.Predicate;
+
+@Mixin(NearestAttackableTargetGoal.class)
+public class NearestAttackableTargetGoalMixin {
+    @WrapOperation(method = "<init>(Lnet/minecraft/world/entity/Mob;Ljava/lang/Class;IZZLjava/util/function/Predicate;)V",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/targeting/TargetingConditions;selector(Ljava/util/function/Predicate;)Lnet/minecraft/world/entity/ai/targeting/TargetingConditions;"
+            )
+    )
+    private TargetingConditions wrapSelector(TargetingConditions instance, @Nullable Predicate<LivingEntity> customPredicate,
+                                             Operation<TargetingConditions> original, @Local(argsOnly = true) Mob mob) {
+        Predicate<LivingEntity> predicate = customPredicate != null ? customPredicate : livingEntity -> true;
+        if (mob instanceof IControllableEntity controllable) {
+            predicate = predicate.and(controllable::wantsToAttack);
+        }
+        predicate = predicate.and(livingEntity -> !MobControlledData.isControlledMob(mob) || !livingEntity.getUUID().equals(MobControlledData.getControllerUUID(mob)));
+        return original.call(instance, predicate);
+    }
+}

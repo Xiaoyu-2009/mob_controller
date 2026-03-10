@@ -6,12 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.monster.ElderGuardian;
-import net.minecraft.world.entity.monster.Guardian;
-import net.minecraft.world.entity.monster.Slime;
-import net.minecraft.world.entity.monster.hoglin.Hoglin;
-import net.minecraft.world.entity.monster.piglin.Piglin;
-import net.minecraft.world.entity.monster.piglin.PiglinBrute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -145,71 +139,21 @@ public class MobControllerItem extends Item {
         if (!mob.level().isClientSide && mob.level() instanceof ServerLevel serverLevel) {
             for (Entity entity : mob.level().getEntitiesOfClass(Entity.class, mob.getBoundingBox().inflate(32.0))) {
                 if (entity instanceof Mob oldMob && MobControlledData.isControlledMob(oldMob)) {
-//                    if (oldMob instanceof Guardian) {
-                    Mob newMob = getNewMob(oldMob, serverLevel);
-                    serverLevel.addFreshEntity(newMob);
-//                    } else {
-//                        mob.setTarget(null);
-//                        MobControlledData.clearSystemAttack(oldMob);
-//                    }
+                    AtomicReference<Mob> atomicNewMob = new AtomicReference<>();
+                    ENTITY_TYPE_FUNCTION_MAP.forEach((entityType, entityFunction) -> {
+                        if (oldMob.getType().equals(entityType)) {
+                            atomicNewMob.set(entityFunction.apply(oldMob));
+                        }
+                    });
+                    if (atomicNewMob.get() != null) {
+                        serverLevel.addFreshEntity(atomicNewMob.get());
+                    } else {
+                        mob.setTarget(null);
+                        MobControlledData.clearSystemAttack(oldMob);
+                    }
                 }
             }
         }
-    }
-
-    private static Mob getNewMob(Mob oldMob, ServerLevel serverLevel) {
-        AtomicReference<Mob> atomicNewMob = new AtomicReference<>();
-        ENTITY_TYPE_FUNCTION_MAP.forEach((entityType, entityFunction) -> {
-            if (oldMob.getType().equals(entityType)) {
-                atomicNewMob.set(entityFunction.apply(oldMob));
-            }
-        });
-        if (atomicNewMob.get() != null) {
-            return atomicNewMob.get();
-        }
-
-        CompoundTag nbt = oldMob.saveWithoutId(new CompoundTag());
-
-        double x = oldMob.getX();
-        double y = oldMob.getY();
-        double z = oldMob.getZ();
-        float yRot = oldMob.getYRot();
-        float xRot = oldMob.getXRot();
-
-        oldMob.remove(Entity.RemovalReason.DISCARDED);
-
-        Mob newMob = oldGetNewMob(oldMob, serverLevel);
-
-        newMob.load(nbt);
-
-        newMob.setPos(x, y, z);
-        newMob.setYRot(yRot);
-        newMob.setXRot(xRot);
-        return newMob;
-    }
-
-    private static Mob oldGetNewMob(Mob oldMob, ServerLevel serverLevel) {
-        Mob newMob;
-        if (oldMob instanceof ElderGuardian) {
-            // 远古守卫者
-            newMob = new ElderGuardian(EntityType.ELDER_GUARDIAN, serverLevel);
-        } else if (oldMob instanceof Hoglin) {
-            // 疣猪兽
-            newMob = new Hoglin(EntityType.HOGLIN, serverLevel);
-        } else if (oldMob instanceof Piglin) {
-            // 猪灵
-            newMob = new Piglin(EntityType.PIGLIN, serverLevel);
-        } else if (oldMob instanceof PiglinBrute) {
-            // 猪灵蛮兵
-            newMob = new PiglinBrute(EntityType.PIGLIN_BRUTE, serverLevel);
-        } else if (oldMob instanceof Slime) {
-            // 史莱姆
-            newMob = new Slime(EntityType.SLIME, serverLevel);
-        } else {
-            // 守卫者
-            newMob = new Guardian(EntityType.GUARDIAN, serverLevel);
-        }
-        return newMob;
     }
 
     private void spawnParticles(Mob mob, boolean success) {

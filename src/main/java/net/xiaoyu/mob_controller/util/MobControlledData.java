@@ -30,7 +30,6 @@ public class MobControlledData {
         STAY,
         /**
          * 游荡
-         * TODO: 尚未实现
          */
         WANDER,
     }
@@ -121,7 +120,8 @@ public class MobControlledData {
 
     public static ControlMode toggleControlMode(Mob mob) {
         ControlMode currentMode = getControlMode(mob);
-        ControlMode newMode = (currentMode == ControlMode.FOLLOW) ? ControlMode.STAY : ControlMode.FOLLOW;
+        int index = currentMode.ordinal() + 1;
+        ControlMode newMode = ControlMode.values()[index >= ControlMode.values().length ? 0 : index];
         setControlMode(mob, newMode);
         return newMode;
     }

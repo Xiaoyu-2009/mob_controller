@@ -9,9 +9,10 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityRegister;
 import net.xiaoyu.mob_controller.event.MobControllerEvent;
-import net.xiaoyu.mob_controller.item.ModItems;
 import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
+import net.xiaoyu.mob_controller.registry.ModEffects;
 import net.xiaoyu.mob_controller.registry.ModEntities;
+import net.xiaoyu.mob_controller.registry.ModItems;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
 
 @Mod(MobController.MOD_ID)
@@ -27,6 +28,8 @@ public class MobController {
         ModItems.ITEMS.register(eventBus);
         ModMenuType.MENU_TYPE.register(eventBus);
         ModEntities.ENTITIES.register(eventBus);
+        ModEffects.MOB_EFFECTS.register(eventBus);
+        ModEffects.POTIONS.register(eventBus);
         CreativeTab.register(eventBus);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         MinecraftForge.EVENT_BUS.register(MobControllerEvent.class);

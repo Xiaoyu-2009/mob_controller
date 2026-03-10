@@ -1,7 +1,9 @@
 package net.xiaoyu.mob_controller.entity;
 
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
+import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -17,14 +19,22 @@ public interface IControllableEntity extends OwnableEntity {
         if (target instanceof OwnableEntity ownable && Objects.equals(ownable.getOwnerUUID(), this.getOwnerUUID())) {
             return false;
         }
-        return !Objects.equals(target, this.getOwner());
+        if (Objects.equals(target, this.getOwner())) {
+            return false;
+        }
+        return !(target instanceof Mob mob) || !MobControlledData.isControlledEntity(target)
+                || !MobControlledData.getControllerUUID(mob).equals(this.getOwnerUUID());
     }
 
     default boolean isSameTeam(LivingEntity living) {
         if (living instanceof OwnableEntity ownable && Objects.equals(ownable.getOwnerUUID(), this.getOwnerUUID())) {
             return true;
         }
-        return Objects.equals(living, this.getOwner());
+        if (Objects.equals(living, this.getOwner())) {
+            return true;
+        }
+        return living instanceof Mob mob && MobControlledData.isControlledEntity(living)
+                && MobControlledData.getControllerUUID(mob).equals(this.getOwnerUUID());
     }
 
     default boolean canSeeAsTarget(LivingEntity living) {
