@@ -5,6 +5,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.xiaoyu.mob_controller.entity.IControllableEntity;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
+import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,7 +21,7 @@ public class MixinEntity {
                 cir.setReturnValue(true);
             } else if (Mob.class.isInstance(this)) {
                 Mob mob = (Mob) (Object) this;
-                if (!MobControlUtil.canControlledMobAttackTarget(mob, livingEntity)) {
+                if (MobControlledData.isControlledMob(mob) && !MobControlUtil.canControlledMobAttackTarget(mob, livingEntity)) {
                     cir.setReturnValue(true);
                 }
             }

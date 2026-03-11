@@ -9,7 +9,7 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityRegister;
 import net.xiaoyu.mob_controller.event.MobControllerEvent;
-import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
+import net.xiaoyu.mob_controller.network.NetWorkManager;
 import net.xiaoyu.mob_controller.registry.ModEffects;
 import net.xiaoyu.mob_controller.registry.ModEntities;
 import net.xiaoyu.mob_controller.registry.ModItems;
@@ -34,6 +34,6 @@ public class MobController {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         MinecraftForge.EVENT_BUS.register(MobControllerEvent.class);
         eventBus.register(MobControlCapabilityRegister.class);
-        ToggleControlModePacket.register();
+        NetWorkManager.register();
     }
 }

@@ -7,10 +7,7 @@ import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobType;
-import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.entity.animal.Squid;
 import net.minecraft.world.entity.monster.Blaze;
@@ -233,7 +230,7 @@ public class MobControlUtil {
         return null;
     }
 
-    public static boolean canControlledMobAttackTarget(Mob controlledMob, LivingEntity target) {
+    public static boolean canControlledMobAttackTarget(Mob controlledMob, Entity target) {
         if (!MobControlledData.isControlledEntity(controlledMob)) {
             return false;
         }

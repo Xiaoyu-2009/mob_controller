@@ -10,6 +10,9 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.world.entity.monster.Ravager;
+import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.monster.piglin.Piglin;
@@ -17,6 +20,8 @@ import net.minecraft.world.entity.monster.piglin.PiglinBrute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
@@ -24,10 +29,14 @@ import net.minecraftforge.event.entity.EntityMobGriefingEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.network.PacketDistributor;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
+import net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket;
+import net.xiaoyu.mob_controller.network.NetWorkManager;
 import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
@@ -49,7 +58,9 @@ public class MobControllerEvent {
         }
     }
 
-    // 被控制的生物不破坏方块/包括弹射物
+    /**
+     * 被控制的生物不破坏方块/包括弹射物
+     */
     @SubscribeEvent
     public static void onEntityMobGriefing(@NotNull EntityMobGriefingEvent event) {
         Entity entity = event.getEntity();
@@ -84,7 +95,9 @@ public class MobControllerEvent {
         }
     }*/
 
-    // 被控制的生物离开世界清理
+    /**
+     * 被控制的生物离开世界清理
+     */
     @SubscribeEvent
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
         if (event.getEntity() instanceof Mob mob) {
@@ -95,7 +108,9 @@ public class MobControllerEvent {
         }
     }
 
-    // tick生命值恢复
+    /**
+     * tick生命值恢复
+     */
     @SubscribeEvent
     public static void onLivingTickHeal(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Mob mob) {
@@ -134,7 +149,9 @@ public class MobControllerEvent {
         }
     }
 
-    // 被控制的生物受到攻击
+    /**
+     * 被控制的生物受到攻击
+     */
     @SubscribeEvent
     public static void onLivingAttack(LivingAttackEvent event) {
         if (event.getEntity() instanceof Mob mob) {
@@ -171,7 +188,9 @@ public class MobControllerEvent {
         }
     }
 
-    // 控制者受到攻击
+    /**
+     * 控制者受到攻击
+     */
     @SubscribeEvent
     public static void onControllerAttack(LivingAttackEvent event) {
         if (event.getEntity() instanceof Player player) {
@@ -218,7 +237,9 @@ public class MobControllerEvent {
         }
     }
 
-    // 控制者攻击其他生物
+    /**
+     * 控制者攻击其他生物
+     */
     @SubscribeEvent
     public static void onControllerAttackOthers(LivingHurtEvent event) {
         if (event.getSource().getEntity() instanceof Player player) {
@@ -266,7 +287,9 @@ public class MobControllerEvent {
         }
     }
 
-    // 被控制的生物攻击的目标是否已死亡[进行清除目标]
+    /**
+     * 被控制的生物攻击的目标是否已死亡[进行清除目标]
+     */
     @SubscribeEvent
     public static void onLivingTickCheckTarget(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Mob mob) {
@@ -286,12 +309,21 @@ public class MobControllerEvent {
                         MobControlledData.clearSystemAttack(mob);
                     }
                 }
+
+                if (!mob.level().isClientSide) {
+                    mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap ->
+                            NetWorkManager.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(event::getEntity),
+                                    new MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT())));
+                }
             }
         }
     }
 
-    // 鼠标右键点击切换跟随/停留模式
+    /**
+     * 鼠标右键点击切换跟随/停留模式
+     */
     @SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
     public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Post event) {
         Minecraft mc = Minecraft.getInstance();
 
@@ -299,10 +331,24 @@ public class MobControllerEvent {
             if (mc.hitResult instanceof EntityHitResult entityHitResult) {
                 if (entityHitResult.getEntity() instanceof Mob mob) {
                     if (mc.screen == null) {
-                        ToggleControlModePacket.INSTANCE.sendToServer(
+                        NetWorkManager.INSTANCE.sendToServer(
                                 new ToggleControlModePacket(mob.getId())
                         );
                     }
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        if (event.getTarget() instanceof Mob mob) {
+            if (mob instanceof Guardian ||
+                    mob instanceof Hoglin ||
+                    mob instanceof Zoglin ||
+                    mob instanceof Ravager) {
+                if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(event.getEntity().getUUID())) {
+                    event.getEntity().startRiding(event.getTarget());
                 }
             }
         }
