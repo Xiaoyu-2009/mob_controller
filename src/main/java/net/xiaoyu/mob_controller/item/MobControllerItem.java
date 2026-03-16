@@ -48,7 +48,7 @@ public class MobControllerItem extends Item {
                     }
                 }*/
 
-                if (MobControlledData.isControlledMob(mob)) {
+                if (MobControlledData.isControlledEntity(mob)) {
                     return InteractionResult.PASS;
                 }
 
@@ -138,7 +138,7 @@ public class MobControllerItem extends Item {
         // 消除被控制的生物仇恨(32格内)
         if (!mob.level().isClientSide && mob.level() instanceof ServerLevel serverLevel) {
             for (Entity entity : mob.level().getEntitiesOfClass(Entity.class, mob.getBoundingBox().inflate(32.0))) {
-                if (entity instanceof Mob oldMob && MobControlledData.isControlledMob(oldMob)) {
+                if (entity instanceof Mob oldMob && MobControlledData.isControlledEntity(oldMob)) {
                     AtomicReference<Mob> atomicNewMob = new AtomicReference<>();
                     ENTITY_TYPE_FUNCTION_MAP.forEach((entityType, entityFunction) -> {
                         if (oldMob.getType().equals(entityType)) {
@@ -152,6 +152,9 @@ public class MobControllerItem extends Item {
                         MobControlledData.clearSystemAttack(oldMob);
                     }
                 }
+            }
+            if (mob.getVehicle() instanceof Mob vehicle) {
+                controlMob(player, vehicle);
             }
         }
     }

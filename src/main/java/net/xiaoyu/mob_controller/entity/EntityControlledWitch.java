@@ -6,12 +6,13 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.*;
-import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableWitchTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestHealableRaiderTargetGoal;
 import net.minecraft.world.entity.monster.PatrollingMonster;
 import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownPotion;
+import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potion;
@@ -29,6 +30,9 @@ import javax.annotation.Nullable;
 import java.util.UUID;
 
 public class EntityControlledWitch extends Witch implements IControllableEntity {
+    @Nullable
+    protected GoalNearestHealableTarget<LivingEntity> goalNearestHealableTarget;
+
     public EntityControlledWitch(EntityType<? extends Witch> entityType, Level level) {
         super(entityType, level);
         this.setCanJoinRaid(false);
@@ -43,18 +47,27 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
         this.goalSelector.addGoal(4, new PatrollingMonster.LongDistancePatrolGoal<>(this, 0.7D, 0.595D));
 
-        GoalNearestHealableTarget<LivingEntity> goalNearestHealableTarget = new GoalNearestHealableTarget<>(this, LivingEntity.class, true,
+        this.goalNearestHealableTarget = new GoalNearestHealableTarget<>(this, LivingEntity.class, true,
                 livingEntity -> this.isSameTeam(livingEntity) && livingEntity.getHealth() < livingEntity.getMaxHealth());
         NearestAttackableWitchTargetGoal<LivingEntity> playerNearestAttackableWitchTargetGoal = new NearestAttackableWitchTargetGoal<>(this, LivingEntity.class, 10, true, false,
-                this::wantsToAttack);
+                entity -> false);
 
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, goalNearestHealableTarget);
+//        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, this.goalNearestHealableTarget);
         this.targetSelector.addGoal(3, playerNearestAttackableWitchTargetGoal);
 
         if (this instanceof AccessorWitch accessorWitch) {
-            accessorWitch.mob_controller$setHealRaidersGoal(goalNearestHealableTarget);
+            accessorWitch.mob_controller$setHealRaidersGoal(new NearestHealableRaiderTargetGoal<>(this, Raider.class,
+                    true, living -> false));
             accessorWitch.mob_controller$setAttackPlayersGoal(playerNearestAttackableWitchTargetGoal);
+        }
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (this.goalNearestHealableTarget != null) {
+            this.goalNearestHealableTarget.decrementCooldown();
         }
     }
 
@@ -67,6 +80,9 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
             double d2 = target.getZ() + vec3.z - this.getZ();
             double d3 = Math.sqrt(d0 * d0 + d2 * d2);
             Potion potion = Potions.HARMING;
+            if (target.isInvertedHealAndHarm()) {
+                potion = Potions.HEALING;
+            }
             if (this.isSameTeam(target)) {
                 if (target.getHealth() <= 4.0F || target.hasEffect(MobEffects.REGENERATION)) {
                     potion = ModEffects.SPECIAL_HEALING.get();
@@ -99,6 +115,11 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
     }
 
     @Override
+    protected boolean shouldDespawnInPeaceful() {
+        return false;
+    }
+
+    @Override
     public boolean canSeeAsTarget(LivingEntity living) {
         return IControllableEntity.super.canSeeAsTarget(living) || IControllableEntity.super.isSameTeam(living);
     }
@@ -113,7 +134,11 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public void setOwnerUUID(@Nullable UUID uuid) {
-        this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> cap.setControllerUUID(uuid));
+        this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
+            if (uuid != null) {
+                cap.setControllerUUID(uuid);
+            }
+        });
     }
 
     @Override

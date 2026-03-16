@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin({Zombie.class, Husk.class})
 public class WaterConversionMixin {
-    
+
     @Inject(method = "convertsInWater", at = @At("HEAD"), cancellable = true)
     private void preventWaterConversion(CallbackInfoReturnable<Boolean> cir) {
         Zombie zombie = (Zombie) (Object) this;

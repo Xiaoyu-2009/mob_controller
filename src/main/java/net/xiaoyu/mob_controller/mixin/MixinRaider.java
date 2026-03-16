@@ -19,7 +19,7 @@ public abstract class MixinRaider extends PatrollingMonster {
 
     @Inject(method = "getCurrentRaid()Lnet/minecraft/world/entity/raid/Raid;", at = @At("RETURN"), cancellable = true)
     private void injectGetCurrentRaid(CallbackInfoReturnable<Raid> cir) {
-        if (MobControlledData.isControlledMob(this)) {
+        if (MobControlledData.isControlledEntity(this)) {
             cir.setReturnValue(null);
         }
     }

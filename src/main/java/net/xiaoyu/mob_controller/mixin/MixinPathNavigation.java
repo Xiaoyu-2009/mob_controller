@@ -23,7 +23,7 @@ public abstract class MixinPathNavigation {
     @Inject(method = "createPath(Ljava/util/Set;IZIF)Lnet/minecraft/world/level/pathfinder/Path;", at = @At("HEAD"), cancellable = true)
     private void injectCreatePath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward,
                                   int accuracy, float followRange, CallbackInfoReturnable<Path> cir) {
-        if (MobControlledData.isControlledMob(mob) && MobControlledData.getControlMode(mob) == MobControlledData.ControlMode.STAY) {
+        if (MobControlledData.isControlledEntity(mob) && MobControlledData.getControlMode(mob) == MobControlledData.ControlMode.STAY) {
             cir.setReturnValue(null);
         }
     }

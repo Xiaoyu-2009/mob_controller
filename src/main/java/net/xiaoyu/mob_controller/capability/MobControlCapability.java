@@ -3,16 +3,20 @@ package net.xiaoyu.mob_controller.capability;
 import net.minecraft.nbt.CompoundTag;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
-import java.util.*;
+import javax.annotation.Nullable;
+import java.util.UUID;
 
 public class MobControlCapability {
+    @Nullable
     private UUID controllerUUID = null;
     private MobControlledData.ControlMode controlMode = MobControlledData.ControlMode.FOLLOW;
     private long lastHealTime = 0;
     private boolean isSystemAttack = false;
-    
-    public MobControlCapability() {}
 
+    public MobControlCapability() {
+    }
+
+    @Nullable
     public UUID getControllerUUID() {
         return controllerUUID;
     }
@@ -20,7 +24,7 @@ public class MobControlCapability {
     public void setControllerUUID(UUID uuid) {
         this.controllerUUID = uuid;
     }
-    
+
     public MobControlledData.ControlMode getControlMode() {
         return controlMode;
     }
@@ -28,7 +32,7 @@ public class MobControlCapability {
     public void setControlMode(MobControlledData.ControlMode mode) {
         this.controlMode = mode;
     }
-    
+
     public boolean isControlled() {
         return controllerUUID != null;
     }
@@ -40,7 +44,7 @@ public class MobControlCapability {
     public void setLastHealTime(long time) {
         this.lastHealTime = time;
     }
-    
+
     public boolean isSystemAttack() {
         return isSystemAttack;
     }
@@ -48,7 +52,7 @@ public class MobControlCapability {
     public void setSystemAttack(boolean systemAttack) {
         isSystemAttack = systemAttack;
     }
-    
+
     public CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();
         if (controllerUUID != null) {
@@ -59,7 +63,7 @@ public class MobControlCapability {
         nbt.putBoolean("IsSystemAttack", isSystemAttack);
         return nbt;
     }
-    
+
     public void deserializeNBT(CompoundTag nbt) {
         if (nbt.contains("ControllerUUID")) {
             controllerUUID = nbt.getUUID("ControllerUUID");

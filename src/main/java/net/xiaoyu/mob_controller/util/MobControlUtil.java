@@ -23,13 +23,15 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.xiaoyu.mob_controller.mixin.AccessorSlimeMoveControl;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
+import java.util.Objects;
 import java.util.UUID;
 
 public class MobControlUtil {
     public static void handleMobFollowing(Mob mob) {
 
-        if (MobControlledData.isControlledMob(mob)) {
+        if (MobControlledData.isControlledEntity(mob)) {
             Player controller = MobControlledData.getController(mob, mob.level());
 
             if (controller != null && !controller.isSpectator()) {
@@ -63,7 +65,7 @@ public class MobControlUtil {
                                     break;
                                 }
                             }
-                        } catch (Exception e) {
+                        } catch (Exception ignored) {
                         }
 
                         try {
@@ -71,7 +73,7 @@ public class MobControlUtil {
                             moveTargetPointField.setAccessible(true);
 
                             moveTargetPointField.set(phantom, new Vec3(controller.getX(), controller.getY() + 1.0D, controller.getZ()));
-                        } catch (Exception e) {
+                        } catch (Exception ignored) {
                         }
                     } else if (mob instanceof Squid squid) {
                         // 鱿鱼
@@ -102,7 +104,7 @@ public class MobControlUtil {
                                     (int) controller.getY() + 2,
                                     (int) controller.getZ()
                             ));
-                        } catch (Exception e) {
+                        } catch (Exception ignored) {
                         }
                     }/*  else if (mob instanceof Bee) {
                         // 蜜蜂
@@ -124,7 +126,7 @@ public class MobControlUtil {
                     }
 
                     // 传送
-                    if (distanceSq > 196.0D/* 1024.0D */) { // [32]14格距离
+                    if (distanceSq > 196.0D && mob.getVehicle() == null) {
                         BlockPos controllerPos = controller.blockPosition();
 
                         // 是否要传送到水中
@@ -165,7 +167,7 @@ public class MobControlUtil {
     }
 
     private static void teleportMob(Mob mob, BlockPos pos) {
-        mob.moveTo(pos, mob.getYRot(), mob.getXRot());
+        mob.teleportTo(pos.getX(), pos.getY(), pos.getZ());
         mob.getNavigation().stop();
     }
 
@@ -176,6 +178,7 @@ public class MobControlUtil {
                 controller.level().getFluidState(controller.blockPosition().above()).getType().equals(Fluids.WATER);
     }
 
+    @Nullable
     private static BlockPos findSafePosition(Mob mob, Player controller, boolean isWater) {
         AABB mobAABB = mob.getBoundingBox();
         BlockPos controllerPos = controller.blockPosition();
@@ -230,12 +233,15 @@ public class MobControlUtil {
         return null;
     }
 
-    public static boolean canControlledMobAttackTarget(Mob controlledMob, Entity target) {
+    public static boolean isEnemy(LivingEntity controlledMob, @Nullable Entity target) {
+        if (target == null) {
+            return false;
+        }
         if (!MobControlledData.isControlledEntity(controlledMob)) {
             return false;
         }
-        if (target instanceof Mob mob && MobControlledData.isControlledEntity(mob)
-                && MobControlledData.getControllerUUID(controlledMob).equals(MobControlledData.getControllerUUID(mob))) {
+        if (target instanceof LivingEntity mob && MobControlledData.isControlledEntity(mob)
+                && Objects.equals(MobControlledData.getControllerUUID(controlledMob), MobControlledData.getControllerUUID(mob))) {
             return false;
         }
 
@@ -290,7 +296,7 @@ public class MobControlUtil {
             String text = Language.getInstance().getOrDefault(translationKey);
             String formattedText = args.length > 0 ? String.format(text, args) : text;
 
-            String messageText = (prefix != null && !prefix.isEmpty()) ? prefix + " " + formattedText : formattedText;
+            String messageText = !prefix.isEmpty() ? prefix + " " + formattedText : formattedText;
 
             Component message = Component.literal(messageText).setStyle(Style.EMPTY.withColor(color));
 

@@ -1,18 +1,31 @@
 package net.xiaoyu.mob_controller.entity.ai.goal;
 
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestHealableRaiderTargetGoal;
-import net.minecraft.world.entity.raid.Raider;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 
 import java.util.function.Predicate;
 
 /**
  * @see NearestHealableRaiderTargetGoal
  */
-public class GoalNearestHealableTarget<T extends LivingEntity> extends NearestHealableRaiderTargetGoal<T> {
-    public GoalNearestHealableTarget(Raider mob, Class<T> targetType, boolean mustSee, @Nullable Predicate<LivingEntity> targetPredicate) {
+public class GoalNearestHealableTarget<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
+    private static final int DEFAULT_COOLDOWN = 200;
+    private int cooldown = 0;
+
+    public GoalNearestHealableTarget(Mob mob, Class<T> targetType, boolean mustSee, Predicate<LivingEntity> targetPredicate) {
         super(mob, targetType, mustSee, targetPredicate);
+        this.targetConditions = TargetingConditions.forNonCombat().range(this.getFollowDistance()).selector(targetPredicate);
+    }
+
+    public int getCooldown() {
+        return this.cooldown;
+    }
+
+    public void decrementCooldown() {
+        --this.cooldown;
     }
 
     @Override
@@ -23,5 +36,11 @@ public class GoalNearestHealableTarget<T extends LivingEntity> extends NearestHe
         } else {
             return false;
         }
+    }
+
+    @Override
+    public void start() {
+        this.cooldown = reducedTickDelay(DEFAULT_COOLDOWN);
+        super.start();
     }
 }

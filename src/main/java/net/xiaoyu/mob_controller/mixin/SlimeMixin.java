@@ -13,13 +13,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.UUID;
+
 @Mixin(Slime.class)
 public abstract class SlimeMixin {
     @Inject(method = "remove(Lnet/minecraft/world/entity/Entity$RemovalReason;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/Slime;moveTo(DDDFF)V"))
     private void injectRemove(Entity.RemovalReason reason, CallbackInfo ci, @Local Slime slime) {
         Mob mob = (Mob) (Object) this;
-        if (MobControlledData.isControlledMob(mob)) {
-            MobControlledData.addControlledMob(MobControlledData.getControllerUUID(mob), slime);
+        if (MobControlledData.isControlledEntity(mob)) {
+            UUID controllerUUID = MobControlledData.getControllerUUID(mob);
+            if (controllerUUID != null) {
+                MobControlledData.addControlledMob(controllerUUID, slime);
+            }
         }
     }
 
@@ -28,9 +33,9 @@ public abstract class SlimeMixin {
     private void onPlayerTouch(Player player, CallbackInfo ci) {
         Slime slime = (Slime) (Object) this;
 
-        if (MobControlledData.isControlledMob(slime)) {
+        if (MobControlledData.isControlledEntity(slime)) {
             if (!player.getUUID().equals(MobControlledData.getControllerUUID(slime))) {
-                if (!MobControlUtil.canControlledMobAttackTarget(slime, player)) {
+                if (!MobControlUtil.isEnemy(slime, player)) {
                     ci.cancel();
                 }
 
@@ -48,7 +53,7 @@ public abstract class SlimeMixin {
     private void onPush(Entity entity, CallbackInfo ci) {
         Slime slime = (Slime) (Object) this;
 
-        if (MobControlledData.isControlledMob(slime)) {
+        if (MobControlledData.isControlledEntity(slime)) {
             if (entity instanceof LivingEntity target) {
 
                 // 不攻击主人
@@ -59,7 +64,7 @@ public abstract class SlimeMixin {
                     }
                 }
 
-                if (!MobControlUtil.canControlledMobAttackTarget(slime, target)) {
+                if (!MobControlUtil.isEnemy(slime, target)) {
                     ci.cancel();
                     return;
                 }

@@ -7,7 +7,7 @@ import net.xiaoyu.mob_controller.MobController;
 
 public class NetWorkManager {
     public static final String PROTOCOL_VERSION = "1";
-    public static SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
+    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(MobController.MOD_ID, "control_mode_toggle"),
             () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals,

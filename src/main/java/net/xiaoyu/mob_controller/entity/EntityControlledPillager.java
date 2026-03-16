@@ -55,6 +55,11 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         itemstack.setDamageValue(damageValue);
     }
 
+    @Override
+    protected boolean shouldDespawnInPeaceful() {
+        return false;
+    }
+
     @Nullable
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
@@ -65,7 +70,11 @@ public class EntityControlledPillager extends Pillager implements IControllableE
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public void setOwnerUUID(@Nullable UUID uuid) {
-        this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> cap.setControllerUUID(uuid));
+        this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
+            if (uuid != null) {
+                cap.setControllerUUID(uuid);
+            }
+        });
     }
 
     @Override

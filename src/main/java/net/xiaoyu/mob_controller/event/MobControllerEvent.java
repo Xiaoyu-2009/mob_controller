@@ -10,6 +10,9 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.animal.Dolphin;
+import net.minecraft.world.entity.animal.Sheep;
 import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.Ravager;
 import net.minecraft.world.entity.monster.Zoglin;
@@ -27,6 +30,7 @@ import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.EntityMobGriefingEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -35,13 +39,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
+import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
 import net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket;
 import net.xiaoyu.mob_controller.network.NetWorkManager;
 import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
+import net.xiaoyu.mob_controller.registry.ModItems;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
-import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -62,7 +68,7 @@ public class MobControllerEvent {
      * 被控制的生物不破坏方块/包括弹射物
      */
     @SubscribeEvent
-    public static void onEntityMobGriefing(@NotNull EntityMobGriefingEvent event) {
+    public static void onEntityMobGriefing(EntityMobGriefingEvent event) {
         Entity entity = event.getEntity();
 
         if (entity instanceof Projectile projectile) {
@@ -73,7 +79,7 @@ public class MobControllerEvent {
             return;
         }
 
-        if (!(entity instanceof Animal) && entity instanceof Mob mob && MobControlledData.isControlledMob(mob)) {
+        if (!(entity instanceof Animal) && !(entity instanceof Piglin) && entity instanceof Mob mob && MobControlledData.isControlledEntity(mob)) {
             event.setResult(Event.Result.DENY);
         }
     }
@@ -102,7 +108,7 @@ public class MobControllerEvent {
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
         if (event.getEntity() instanceof Mob mob) {
 
-            if (MobControlledData.isControlledMob(mob)) {
+            if (MobControlledData.isControlledEntity(mob)) {
                 MobControlledData.removeControlledMobOnDeath(mob);
             }
         }
@@ -115,7 +121,7 @@ public class MobControllerEvent {
     public static void onLivingTickHeal(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Mob mob) {
 
-            if (MobControlledData.isControlledMob(mob)) {
+            if (MobControlledData.isControlledEntity(mob)) {
                 mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
                     long currentTime = mob.level().getGameTime();
                     long lastHealTime = cap.getLastHealTime();
@@ -156,14 +162,14 @@ public class MobControllerEvent {
     public static void onLivingAttack(LivingAttackEvent event) {
         if (event.getEntity() instanceof Mob mob) {
 
-            if (MobControlledData.isControlledMob(mob)) {
+            if (MobControlledData.isControlledEntity(mob)) {
                 if (event.getSource().getEntity() instanceof LivingEntity attacker) {
                     UUID controllerUUID = MobControlledData.getControllerUUID(mob);
                     boolean isController = attacker instanceof Player && attacker.getUUID().equals(controllerUUID);
 
                     // 被控制的生物攻击攻击者[攻击者不是控制者]
                     if (!isController) {
-                        if (!MobControlUtil.canControlledMobAttackTarget(mob, attacker)) {
+                        if (!MobControlUtil.isEnemy(mob, attacker)) {
                             return;
                         }
 
@@ -200,7 +206,7 @@ public class MobControllerEvent {
                 for (Entity entity : serverLevel.getAllEntities()) {
                     if (entity instanceof Mob mob) {
 
-                        if (MobControlledData.isControlledMob(mob)) {
+                        if (MobControlledData.isControlledEntity(mob)) {
                             UUID controllerUUID = MobControlledData.getControllerUUID(mob);
 
                             if (controllerUUID != null && controllerUUID.equals(player.getUUID())) {
@@ -208,7 +214,7 @@ public class MobControllerEvent {
                                 if (event.getSource().getEntity() instanceof LivingEntity attacker) {
 
                                     if (!mob.equals(attacker) && mob.getTarget() == null) {
-                                        if (!MobControlUtil.canControlledMobAttackTarget(mob, attacker)) {
+                                        if (!MobControlUtil.isEnemy(mob, attacker)) {
                                             continue;
                                         }
 
@@ -249,7 +255,7 @@ public class MobControllerEvent {
                 for (Entity entity : serverLevel.getAllEntities()) {
                     if (entity instanceof Mob mob) {
 
-                        if (MobControlledData.isControlledMob(mob)) {
+                        if (MobControlledData.isControlledEntity(mob)) {
                             UUID controllerUUID = MobControlledData.getControllerUUID(mob);
 
                             if (controllerUUID != null && controllerUUID.equals(player.getUUID())) {
@@ -258,14 +264,14 @@ public class MobControllerEvent {
                                     boolean isPlayer = target instanceof Player;
 
                                     if (!mob.equals(target) && mob.getTarget() == null && !isPlayer) {
-                                        if (!MobControlUtil.canControlledMobAttackTarget(mob, target)) {
+                                        if (!MobControlUtil.isEnemy(mob, target)) {
                                             continue;
                                         }
 
                                         MobControlledData.markSystemAttack(mob);
 
                                         // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
-                                        if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
+                                        if (mob instanceof Hoglin || mob instanceof Zoglin) {
                                             Brain<?> brain = mob.getBrain();
                                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                                             brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, 200L);
@@ -294,7 +300,7 @@ public class MobControllerEvent {
     public static void onLivingTickCheckTarget(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Mob mob) {
 
-            if (MobControlledData.isControlledMob(mob)) {
+            if (MobControlledData.isControlledEntity(mob)) {
                 LivingEntity target = mob.getTarget();
 
                 // 目标不存在/死亡/不再存活时清除
@@ -330,7 +336,7 @@ public class MobControllerEvent {
         if (event.getButton() == InputConstants.MOUSE_BUTTON_RIGHT && event.getAction() == InputConstants.RELEASE) {
             if (mc.hitResult instanceof EntityHitResult entityHitResult) {
                 if (entityHitResult.getEntity() instanceof Mob mob) {
-                    if (mc.screen == null) {
+                    if (mc.player != null && mc.screen == null && !mc.player.getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())) {
                         NetWorkManager.INSTANCE.sendToServer(
                                 new ToggleControlModePacket(mob.getId())
                         );
@@ -342,13 +348,27 @@ public class MobControllerEvent {
 
     @SubscribeEvent
     public static void onPlayerEntityInteract(PlayerInteractEvent.EntityInteract event) {
-        if (event.getTarget() instanceof Mob mob) {
+        if (event.getTarget() instanceof Mob mob && !event.getEntity().getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())) {
             if (mob instanceof Guardian ||
                     mob instanceof Hoglin ||
                     mob instanceof Zoglin ||
-                    mob instanceof Ravager) {
-                if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(event.getEntity().getUUID())) {
+                    mob instanceof Ravager ||
+                    mob instanceof Cow ||
+                    mob instanceof Sheep ||
+                    mob instanceof Dolphin) {
+                if (MobControlledData.isControlledEntity(mob) && Objects.equals(MobControlledData.getControllerUUID(mob), event.getEntity().getUUID())) {
                     event.getEntity().startRiding(event.getTarget());
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingChangeTargetEvent(LivingChangeTargetEvent event) {
+        if (event.getEntity() instanceof Mob mob && event.getNewTarget() != null) {
+            if (MobControlledData.isControlledEntity(mob) && !MobControlUtil.isEnemy(mob, event.getNewTarget())) {
+                if (!(mob instanceof EntityControlledWitch)) {
+                    event.setCanceled(true);
                 }
             }
         }

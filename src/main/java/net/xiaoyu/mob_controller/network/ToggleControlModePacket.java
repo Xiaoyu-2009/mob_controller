@@ -8,6 +8,7 @@ import net.minecraftforge.network.NetworkEvent;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
+import java.util.Objects;
 import java.util.function.Supplier;
 
 public class ToggleControlModePacket {
@@ -30,7 +31,7 @@ public class ToggleControlModePacket {
             ServerPlayer player = ctx.get().getSender();
 
             if (player != null && player.level().getEntity(this.entityId) instanceof Mob mob) {
-                if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(player.getUUID())) {
+                if (MobControlledData.isControlledEntity(mob) && Objects.equals(MobControlledData.getControllerUUID(mob), player.getUUID())) {
 
                     MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
 

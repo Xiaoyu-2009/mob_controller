@@ -23,7 +23,7 @@ public interface IControllableEntity extends OwnableEntity {
             return false;
         }
         return !(target instanceof Mob mob) || !MobControlledData.isControlledEntity(target)
-                || !MobControlledData.getControllerUUID(mob).equals(this.getOwnerUUID());
+                || !Objects.equals(MobControlledData.getControllerUUID(mob), this.getOwnerUUID());
     }
 
     default boolean isSameTeam(LivingEntity living) {
@@ -34,9 +34,10 @@ public interface IControllableEntity extends OwnableEntity {
             return true;
         }
         return living instanceof Mob mob && MobControlledData.isControlledEntity(living)
-                && MobControlledData.getControllerUUID(mob).equals(this.getOwnerUUID());
+                && Objects.equals(MobControlledData.getControllerUUID(mob), this.getOwnerUUID());
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     default boolean canSeeAsTarget(LivingEntity living) {
         return wantsToAttack(living);
     }

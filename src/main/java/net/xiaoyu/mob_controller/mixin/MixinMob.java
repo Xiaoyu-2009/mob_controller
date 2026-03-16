@@ -26,7 +26,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
         Mob mob = (Mob) (Object) this;
 
         // 不会进行转换的被控制生物
-        if (MobControlledData.isControlledMob(mob)) {
+        if (MobControlledData.isControlledEntity(mob)) {
             // 猪灵/疣猪兽=僵尸猪灵/僵尸疣猪兽
             if (mob instanceof AbstractPiglin) {
                 ((AbstractPiglin) mob).setImmuneToZombification(true);
@@ -53,7 +53,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
     private void onSetTarget(LivingEntity target, CallbackInfo ci) {
         Mob mob = (Mob) (Object) this;
 
-        if (MobControlledData.isControlledMob(mob)) {
+        if (MobControlledData.isControlledEntity(mob)) {
             if (!MobControlledData.isSystemAttack(mob)) {
                 if (mob instanceof IControllableEntity controllable) {
                     if (!controllable.canSeeAsTarget(target)) {
@@ -65,7 +65,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
             } /*else {
                 MobControlledData.clearSystemAttack(mob);
             }*/
-        } else if (MobControlledData.isControlledEntity(target)) {
+        } else if (target != null && MobControlledData.isControlledEntity(target)) {
             if (!(mob.getLastHurtByMob() != null && MobControlledData.isControlledEntity(mob.getLastHurtByMob()))) {
                 if (mob instanceof IControllableEntity controllable) {
                     if (!controllable.canSeeAsTarget(target)) {
@@ -87,7 +87,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
 
         if (mob instanceof Guardian guardian) {
 
-            if (MobControlledData.isControlledMob(guardian) && target == null) {
+            if (MobControlledData.isControlledEntity(guardian) && target == null) {
                 LivingEntity currentTarget = guardian.getTarget();
                 if (currentTarget != null && currentTarget.isAlive() && !currentTarget.isDeadOrDying()) {
                     ci.cancel();
@@ -101,7 +101,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
         Object thiz = this;
         if (thiz instanceof Mob mob) {
             Entity entity = this.getFirstPassenger();
-            if (entity != null && MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(entity.getUUID())) {
+            if (entity != null && MobControlledData.isControlledEntity(mob) && MobControlledData.getControllerUUID(mob).equals(entity.getUUID())) {
                 if (entity instanceof LivingEntity living) {
                     cir.setReturnValue(living);
                 }

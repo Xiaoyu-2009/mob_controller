@@ -8,8 +8,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class InventoryArmor extends SimpleContainer {
     private static final EquipmentSlot[] SLOTS = {
-        EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD,
-        EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+            EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD,
+            EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
     };
 
     private final Mob mob;
@@ -27,14 +27,17 @@ public class InventoryArmor extends SimpleContainer {
     public void setItem(int index, ItemStack stack) {
         super.setItem(index, stack);
         EquipmentSlot slot = this.slotType(index);
-        if (slot != null && !this.mob.level().isClientSide) 
+        if (slot != null && !this.mob.level().isClientSide) {
             this.mob.setItemSlot(slot, stack);
+        }
     }
 
     @Override
     public boolean canPlaceItem(int index, ItemStack stack) {
         EquipmentSlot slot = this.slotType(index);
-        if (slot == null) return false;
+        if (slot == null) {
+            return false;
+        }
 
         return switch (slot) {
             case CHEST, LEGS, FEET -> stack.canEquip(slot, this.mob);
@@ -44,8 +47,10 @@ public class InventoryArmor extends SimpleContainer {
 
     @Nullable
     public EquipmentSlot slotType(int index) {
-        if (index < 0 || index >= SLOTS.length) return null;
-        
+        if (index < 0 || index >= SLOTS.length) {
+            return null;
+        }
+
         return SLOTS[index];
     }
 }

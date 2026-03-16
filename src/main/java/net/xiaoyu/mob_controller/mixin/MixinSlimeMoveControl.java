@@ -15,7 +15,7 @@ public abstract class MixinSlimeMoveControl {
 
     @WrapOperation(method = "tick()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Mob;setSpeed(F)V"))
     private void wrapTickSetSpeed(Mob instance, float speed, Operation<Void> original) {
-        if (MobControlledData.isControlledMob(instance) && MobControlledData.getControlMode(instance) == MobControlledData.ControlMode.STAY) {
+        if (MobControlledData.isControlledEntity(instance) && MobControlledData.getControlMode(instance) == MobControlledData.ControlMode.STAY) {
             instance.setSpeed(0);
             this.jumpDelay = 10;
         } else {

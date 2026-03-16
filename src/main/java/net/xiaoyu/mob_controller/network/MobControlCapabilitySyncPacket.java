@@ -9,6 +9,7 @@ import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 
+import java.util.Objects;
 import java.util.function.Supplier;
 
 public class MobControlCapabilitySyncPacket {
@@ -22,7 +23,7 @@ public class MobControlCapabilitySyncPacket {
 
     public MobControlCapabilitySyncPacket(FriendlyByteBuf buf) {
         this.entityId = buf.readInt();
-        this.entityCap = buf.readAnySizeNbt();
+        this.entityCap = Objects.requireNonNull(buf.readAnySizeNbt());
     }
 
     public void toBytes(FriendlyByteBuf buf) {

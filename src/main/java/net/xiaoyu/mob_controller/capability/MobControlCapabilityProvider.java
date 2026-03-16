@@ -7,12 +7,13 @@ import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.common.util.LazyOptional;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MobControlCapabilityProvider implements ICapabilityProvider, INBTSerializable<CompoundTag> {
-    public static Capability<MobControlCapability> MOB_CONTROL_CAPABILITY = null;
+    @SuppressWarnings("NotNullFieldNotInitialized")
+    public static Capability<MobControlCapability> MOB_CONTROL_CAPABILITY;
 
+    @Nullable
     private MobControlCapability capability = null;
     private final LazyOptional<MobControlCapability> lazyCapability = LazyOptional.of(this::createCapability);
 
@@ -24,9 +25,8 @@ public class MobControlCapabilityProvider implements ICapabilityProvider, INBTSe
         return capability;
     }
 
-    @Nonnull
     @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
+    public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
         if (cap.equals(MOB_CONTROL_CAPABILITY)) {
             return lazyCapability.cast();
         }

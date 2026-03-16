@@ -3,11 +3,13 @@ package net.xiaoyu.mob_controller.util;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.util.LazyOptional;
 import net.xiaoyu.mob_controller.capability.MobControlCapability;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -43,7 +45,9 @@ public class MobControlledData {
 
         // 不会自己消失//捡起物品
         mob.setPersistenceRequired();
-        mob.setCanPickUpLoot(false);
+        if (!(mob instanceof Piglin)) {
+            mob.setCanPickUpLoot(false);
+        }
 
         if (isHighHealthMob(mob)) {
             PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.computeIfAbsent(controllerUUID, k -> new HashSet<>()).add(mob.getType());
@@ -77,17 +81,18 @@ public class MobControlledData {
         }
     }
 
-    public static boolean isControlledMob(Mob mob) {
+    public static boolean isControlledEntity(LivingEntity mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isControlled).orElse(false);
     }
 
-    public static UUID getControllerUUID(Mob mob) {
+    public static @Nullable UUID getControllerUUID(LivingEntity mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::getControllerUUID).orElse(null);
     }
 
-    public static Player getController(Mob mob, Level level) {
+    @Nullable
+    public static Player getController(LivingEntity mob, Level level) {
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID != null) {
             for (Player player : level.players()) {
@@ -98,14 +103,6 @@ public class MobControlledData {
         }
 
         return null;
-    }
-
-    public static boolean isControlledEntity(LivingEntity entity) {
-        if (entity instanceof Mob) {
-            return isControlledMob((Mob) entity);
-        }
-
-        return false;
     }
 
     public static void setControlMode(Mob mob, ControlMode mode) {

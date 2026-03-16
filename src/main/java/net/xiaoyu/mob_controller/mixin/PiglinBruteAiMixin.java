@@ -23,7 +23,7 @@ public class PiglinBruteAiMixin {
     @Inject(method = "findNearestValidAttackTarget", at = @At("HEAD"))
     private static void excludeOwnerFromTargeting(AbstractPiglin piglin, CallbackInfoReturnable<Optional<? extends LivingEntity>> cir) {
         PiglinBrute brute = (PiglinBrute) piglin;
-        if (MobControlledData.isControlledMob(brute)) {
+        if (MobControlledData.isControlledEntity(brute)) {
             UUID ownerUUID = MobControlledData.getControllerUUID(brute);
             Brain<PiglinBrute> brain = brute.getBrain();
 

@@ -27,7 +27,7 @@ public abstract class MixinMobEffectUtil {
     )
     private static List<ServerPlayer> wrapAddEffectToPlayersAround(ServerLevel instance, Predicate<? super ServerPlayer> predicate, Operation<List<ServerPlayer>> original, @Local(argsOnly = true) @Nullable Entity source) {
         predicate = predicate.and(player -> source instanceof Mob mob
-                && (!MobControlledData.isControlledMob(mob) || !MobControlUtil.canControlledMobAttackTarget(mob, (Entity) player)));
+                && (!MobControlledData.isControlledEntity(mob) || !MobControlUtil.isEnemy(mob, (Entity) player)));
         return original.call(instance, predicate);
     }
 }

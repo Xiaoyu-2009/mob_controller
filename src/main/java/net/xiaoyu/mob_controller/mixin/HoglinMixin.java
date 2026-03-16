@@ -17,7 +17,7 @@ public class HoglinMixin {
     @Inject(method = "doHurtTarget", at = @At("HEAD"), cancellable = true)
     private void onDoHurtTarget(Entity target, CallbackInfoReturnable<Boolean> cir) {
         Hoglin hoglin = (Hoglin) (Object) this;
-        if (MobControlledData.isControlledMob(hoglin) && MobControlUtil.canControlledMobAttackTarget(hoglin, target)) {
+        if (MobControlledData.isControlledEntity(hoglin) && !MobControlUtil.isEnemy(hoglin, target)) {
             cir.cancel();
         }
     }

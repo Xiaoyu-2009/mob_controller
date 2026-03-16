@@ -3,23 +3,32 @@ package net.xiaoyu.mob_controller.inv;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.player.*;
-import net.minecraft.world.inventory.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.xiaoyu.mob_controller.MobController;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
 
+import javax.annotation.Nullable;
+
 public class ContainerArmor extends AbstractContainerMenu {
+    @Nullable
     private InventoryArmor inv;
 
     public ContainerArmor(int windowID, Inventory playerInv, FriendlyByteBuf buf) {
         this(windowID, playerInv, playerInv.player.level().getEntity(buf.readInt()));
     }
 
-    public ContainerArmor(int windowID, Inventory playerInv, Entity e) {
+    public ContainerArmor(int windowID, Inventory playerInv, @Nullable Entity e) {
         super(ModMenuType.ARMOR_MENU.get(), windowID);
-        if (!(e instanceof Mob living)) return;
+        if (!(e instanceof Mob living)) {
+            return;
+        }
         this.inv = new InventoryArmor(living);
         this.inv.startOpen(playerInv.player);
         this.addSlot(new Slot(this.inv, 0, 80, 17) {
@@ -57,7 +66,10 @@ public class ContainerArmor extends AbstractContainerMenu {
 
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
+                if (ContainerArmor.this.inv != null) {
+                    return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
+                }
+                return false;
             }
 
             @Override
@@ -74,7 +86,10 @@ public class ContainerArmor extends AbstractContainerMenu {
 
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
+                if (ContainerArmor.this.inv != null) {
+                    return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
+                }
+                return false;
             }
 
             @Override
@@ -91,7 +106,10 @@ public class ContainerArmor extends AbstractContainerMenu {
 
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
+                if (ContainerArmor.this.inv != null) {
+                    return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
+                }
+                return false;
             }
 
             @Override
@@ -119,7 +137,7 @@ public class ContainerArmor extends AbstractContainerMenu {
     public ItemStack quickMoveStack(Player playerIn, int index) {
         ItemStack itemstack = ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
-        if (slot != null && slot.hasItem()) {
+        if (slot.hasItem()) {
             ItemStack itemstack1 = slot.getItem();
             itemstack = itemstack1.copy();
             if (index < 6) {
