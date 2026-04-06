@@ -15,6 +15,10 @@ public class ModItems {
     public static final RegistryObject<Item> MOB_CONTROLLER_ITEM = ITEMS.register("mob_controller",
             () -> new MobControllerItem(new Item.Properties().stacksTo(1)));
 
+    // 控制令
+    public static final RegistryObject<Item> CONTROL_COMMAND_ITEM = ITEMS.register("control_command",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+
     // 盔甲编辑杖
     public static final RegistryObject<Item> ARMOR_EDITING_BLUEPRINT = ITEMS.register("armor_editing_blueprint",
             () -> new MobArmor(new Item.Properties().stacksTo(1)));

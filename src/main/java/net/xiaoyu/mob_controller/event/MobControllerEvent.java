@@ -332,7 +332,7 @@ public class MobControllerEvent {
     public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Post event) {
         Minecraft mc = Minecraft.getInstance();
 
-        if (mc.player == null || mc.screen != null || !mc.player.getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())) {
+        if (mc.player == null || mc.screen != null || !mc.player.getMainHandItem().is(ModItems.CONTROL_COMMAND_ITEM.get())) {
             return;
         }
 

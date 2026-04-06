@@ -29,7 +29,7 @@ public class ApplyControlCommandPacket {
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
-            if (player == null || !player.getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())) {
+            if (player == null || !player.getMainHandItem().is(ModItems.CONTROL_COMMAND_ITEM.get())) {
                 return;
             }
 
