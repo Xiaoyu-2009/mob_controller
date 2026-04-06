@@ -22,7 +22,6 @@ import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.monster.piglin.PiglinBrute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
@@ -40,9 +39,9 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
+import net.xiaoyu.mob_controller.network.ApplyControlCommandPacket;
 import net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket;
 import net.xiaoyu.mob_controller.network.NetWorkManager;
-import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
 import net.xiaoyu.mob_controller.registry.ModItems;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
@@ -326,23 +325,30 @@ public class MobControllerEvent {
     }
 
     /**
-     * 鼠标右键点击切换跟随/停留模式
+     * 手持控制器时，左/右/中键对32格内已控制生物下达模式命令
      */
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Post event) {
         Minecraft mc = Minecraft.getInstance();
 
-        if (event.getButton() == InputConstants.MOUSE_BUTTON_RIGHT && event.getAction() == InputConstants.RELEASE) {
-            if (mc.hitResult instanceof EntityHitResult entityHitResult) {
-                if (entityHitResult.getEntity() instanceof Mob mob) {
-                    if (mc.player != null && mc.screen == null && !mc.player.getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())) {
-                        NetWorkManager.INSTANCE.sendToServer(
-                                new ToggleControlModePacket(mob.getId())
-                        );
-                    }
-                }
-            }
+        if (mc.player == null || mc.screen != null || !mc.player.getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())) {
+            return;
+        }
+
+        if (event.getAction() != InputConstants.RELEASE) {
+            return;
+        }
+
+        MobControlledData.ControlMode mode = switch (event.getButton()) {
+            case InputConstants.MOUSE_BUTTON_LEFT -> MobControlledData.ControlMode.FOLLOW;
+            case InputConstants.MOUSE_BUTTON_RIGHT -> MobControlledData.ControlMode.STAY;
+            case InputConstants.MOUSE_BUTTON_MIDDLE -> MobControlledData.ControlMode.WANDER;
+            default -> null;
+        };
+
+        if (mode != null) {
+            NetWorkManager.INSTANCE.sendToServer(new ApplyControlCommandPacket(mode));
         }
     }
 

@@ -20,5 +20,7 @@ public class NetWorkManager {
                 ToggleControlModePacket::new, ToggleControlModePacket::handle);
         INSTANCE.registerMessage(id++, MobControlCapabilitySyncPacket.class, MobControlCapabilitySyncPacket::toBytes,
                 MobControlCapabilitySyncPacket::new, MobControlCapabilitySyncPacket::handle);
+        INSTANCE.registerMessage(id++, ApplyControlCommandPacket.class, ApplyControlCommandPacket::toBytes,
+            ApplyControlCommandPacket::new, ApplyControlCommandPacket::handle);
     }
 }
