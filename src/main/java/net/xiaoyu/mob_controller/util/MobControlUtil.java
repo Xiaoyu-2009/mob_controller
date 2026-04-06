@@ -4,6 +4,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.locale.Language;
+import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
@@ -301,6 +303,20 @@ public class MobControlUtil {
             Component message = Component.literal(messageText).setStyle(Style.EMPTY.withColor(color));
 
             serverPlayer.sendSystemMessage(message, true);
+        }
+    }
+
+    // 显示控制状态 title（TODO#5）
+    public static void showControlModeTitle(Player player, Component mobName, String modeTranslationKey, ChatFormatting color) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            Component title = Component.translatable(
+                    "mob_controller.title.control_mode",
+                    mobName,
+                    Component.translatable(modeTranslationKey)
+            ).setStyle(Style.EMPTY.withColor(color));
+
+            serverPlayer.connection.send(new ClientboundSetTitlesAnimationPacket(5, 30, 10));
+            serverPlayer.connection.send(new ClientboundSetTitleTextPacket(title));
         }
     }
 }

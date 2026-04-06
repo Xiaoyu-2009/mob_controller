@@ -1,5 +1,6 @@
 package net.xiaoyu.mob_controller.item;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -17,6 +18,7 @@ import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.entity.EntityControlledPillager;
 import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
 import net.xiaoyu.mob_controller.registry.ModEntities;
+import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import java.util.HashMap;
@@ -88,6 +90,7 @@ public class MobControllerItem extends Item {
                     mob.setTarget(null);
                     // 控制成功
                     controlMob(player, mob);
+                    MobControlUtil.showControlModeTitle(player, mob.getDisplayName(), "mob_controller.mode.follow", ChatFormatting.GOLD);
                     spawnParticles(mob, true);
                     return InteractionResult.SUCCESS;
                 } else {
