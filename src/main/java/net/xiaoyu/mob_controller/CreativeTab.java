@@ -23,6 +23,8 @@ public class CreativeTab {
                         output.accept(ModItems.MOB_CONTROLLER_ITEM.get());
                         // 控制令
                         output.accept(ModItems.CONTROL_COMMAND_ITEM.get());
+                        // 心变契约
+                        output.accept(ModItems.HEART_CONTRACT_ITEM.get());
                         // 盔甲编辑蓝图
                         output.accept(ModItems.ARMOR_EDITING_BLUEPRINT.get());
                     })

@@ -354,7 +354,9 @@ public class MobControllerEvent {
 
     @SubscribeEvent
     public static void onPlayerEntityInteract(PlayerInteractEvent.EntityInteract event) {
-        if (event.getTarget() instanceof Mob mob && !event.getEntity().getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())) {
+        if (event.getTarget() instanceof Mob mob
+                && !event.getEntity().getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())
+                && !event.getEntity().getMainHandItem().is(ModItems.HEART_CONTRACT_ITEM.get())) {
             if (mob instanceof Guardian ||
                     mob instanceof Hoglin ||
                     mob instanceof Zoglin ||

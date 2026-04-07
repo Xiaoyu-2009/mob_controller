@@ -54,6 +54,23 @@ public class MobControlledData {
         }
     }
 
+    public static boolean releaseControl(Mob mob) {
+        UUID controllerUUID = getControllerUUID(mob);
+        if (controllerUUID == null) {
+            return false;
+        }
+
+        LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
+        capability.ifPresent(cap -> {
+            cap.setControllerUUID(null);
+            cap.setControlMode(ControlMode.FOLLOW);
+            cap.setSystemAttack(false);
+        });
+
+        removeHighHealthRecord(controllerUUID, mob);
+        return capability.isPresent();
+    }
+
     private static boolean isHighHealthMob(Mob mob) {
         return mob.getMaxHealth() > HIGH_HEALTH_THRESHOLD;
     }
@@ -70,13 +87,21 @@ public class MobControlledData {
     // 列表中移除[被控制的生物死亡]
     public static void removeControlledMobOnDeath(Mob mob) {
         UUID controllerUUID = getControllerUUID(mob);
-        if (controllerUUID != null && isHighHealthMob(mob)) {
-            Set<EntityType<?>> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(controllerUUID);
-            if (controlledMobs != null) {
-                controlledMobs.remove(mob.getType());
-                if (controlledMobs.isEmpty()) {
-                    PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.remove(controllerUUID);
-                }
+        if (controllerUUID != null) {
+            removeHighHealthRecord(controllerUUID, mob);
+        }
+    }
+
+    private static void removeHighHealthRecord(UUID controllerUUID, Mob mob) {
+        if (!isHighHealthMob(mob)) {
+            return;
+        }
+
+        Set<EntityType<?>> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(controllerUUID);
+        if (controlledMobs != null) {
+            controlledMobs.remove(mob.getType());
+            if (controlledMobs.isEmpty()) {
+                PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.remove(controllerUUID);
             }
         }
     }
