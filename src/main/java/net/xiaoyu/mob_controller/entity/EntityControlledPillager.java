@@ -23,13 +23,22 @@ import net.xiaoyu.mob_controller.entity.ai.goal.GoalOwnerHurtTarget;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
+/**
+ * 受控掠夺者实体。
+ *
+ * <p>替代原版掠夺者，用于承载可控实体行为与主人关联逻辑。</p>
+ */
 
 public class EntityControlledPillager extends Pillager implements IControllableEntity {
+    /**
+     * 构造受控掠夺者。
+     */
     public EntityControlledPillager(EntityType<? extends Pillager> entityType, Level level) {
         super(entityType, level);
         this.setCanJoinRaid(false);
     }
 
+    /** 注册目标与行为 AI。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
@@ -43,6 +52,9 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
     }
 
+    /**
+     * 执行弩攻击并恢复弩耐久值，避免自动消耗。
+     */
     @Override
     public void performCrossbowAttack(LivingEntity user, float velocity) {
         InteractionHand interactionhand = ProjectileUtil.getWeaponHoldingHand(user, item -> item instanceof CrossbowItem);
@@ -55,11 +67,13 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         itemstack.setDamageValue(damageValue);
     }
 
+    /** 在和平模式下不自动消失。 */
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;
     }
 
+    /** 获取主人 UUID。 */
     @Nullable
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
@@ -67,6 +81,7 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::getControllerUUID).orElse(null);
     }
 
+    /** 设置主人 UUID。 */
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public void setOwnerUUID(@Nullable UUID uuid) {
@@ -77,6 +92,7 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         });
     }
 
+    /** 判断是否受控。 */
     @Override
     public boolean isControlled() {
         return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::isControlled).orElse(false);

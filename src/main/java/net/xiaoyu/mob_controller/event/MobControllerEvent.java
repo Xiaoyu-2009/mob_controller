@@ -52,10 +52,17 @@ import net.xiaoyu.mob_controller.util.MobControlledData;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-
+/**
+ * 生物控制系统事件处理器。
+ *
+ * <p>集中处理能力附加、攻击联动、模式指令、目标同步与重生调度等 Forge 事件。</p>
+ */
 @Mod.EventBusSubscriber
 public class MobControllerEvent {
 
+    /**
+     * 为生物实体附加控制能力。
+     */
     @SubscribeEvent
     public static void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Mob) {
@@ -67,7 +74,7 @@ public class MobControllerEvent {
     }
 
     /**
-     * 被控制的生物不破坏方块/包括弹射物
+     * 拦截受控生物（含其弹射物）的方块破坏行为。
      */
     @SubscribeEvent
     public static void onEntityMobGriefing(EntityMobGriefingEvent event) {
@@ -104,7 +111,7 @@ public class MobControllerEvent {
     }*/
 
     /**
-     * 被控制的生物离开世界清理
+     * 生物离开世界时清理受控记录。
      */
     @SubscribeEvent
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
@@ -116,6 +123,9 @@ public class MobControllerEvent {
         }
     }
 
+    /**
+     * 受控生物死亡时安排延迟重生。
+     */
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof Mob mob && mob.level() instanceof ServerLevel serverLevel
@@ -128,6 +138,9 @@ public class MobControllerEvent {
         }
     }
 
+    /**
+     * 服务端每刻处理待重生队列。
+     */
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
@@ -136,7 +149,7 @@ public class MobControllerEvent {
     }
 
     /**
-     * tick生命值恢复
+     * 受控生物每刻自动恢复生命值（无有效目标时）。
      */
     @SubscribeEvent
     public static void onLivingTickHeal(LivingEvent.LivingTickEvent event) {
@@ -177,7 +190,7 @@ public class MobControllerEvent {
     }
 
     /**
-     * 被控制的生物受到攻击
+     * 受控生物受攻击时触发反击目标设置。
      */
     @SubscribeEvent
     public static void onLivingAttack(LivingAttackEvent event) {
@@ -216,7 +229,7 @@ public class MobControllerEvent {
     }
 
     /**
-     * 控制者受到攻击
+     * 控制者受攻击时，调度其受控生物进行援护反击。
      */
     @SubscribeEvent
     public static void onControllerAttack(LivingAttackEvent event) {
@@ -265,7 +278,7 @@ public class MobControllerEvent {
     }
 
     /**
-     * 控制者攻击其他生物
+     * 控制者攻击其他生物时，调度受控生物协同攻击。
      */
     @SubscribeEvent
     public static void onControllerAttackOthers(LivingHurtEvent event) {
@@ -347,7 +360,7 @@ public class MobControllerEvent {
     }
 
     /**
-     * 手持控制器时，左/右/中键对32格内已控制生物下达模式命令
+     * 客户端鼠标按键释放时，下发控制令批量模式切换请求。
      */
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
@@ -374,6 +387,9 @@ public class MobControllerEvent {
         }
     }
 
+    /**
+     * 玩家与可骑乘受控生物交互时，允许控制者直接骑乘。
+     */
     @SubscribeEvent
     public static void onPlayerEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (event.getTarget() instanceof Mob mob
@@ -393,6 +409,9 @@ public class MobControllerEvent {
         }
     }
 
+    /**
+     * 目标切换事件中过滤受控生物对非敌对目标的锁定。
+     */
     @SubscribeEvent
     public static void onLivingChangeTargetEvent(LivingChangeTargetEvent event) {
         if (event.getEntity() instanceof Mob mob && event.getNewTarget() != null) {

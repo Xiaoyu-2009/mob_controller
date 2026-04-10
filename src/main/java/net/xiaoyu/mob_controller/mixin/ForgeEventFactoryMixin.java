@@ -12,10 +12,17 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import javax.annotation.Nullable;
-
+/**
+ * Forge 事件工厂注入。
+ *
+ * <p>受控生物（及其弹射物）触发的 mobGriefing 查询统一返回禁止。</p>
+ */
 @Mixin(ForgeEventFactory.class)
 public class ForgeEventFactoryMixin {
 
+    /**
+     * 注入 {@code getMobGriefingEvent} 头部：受控生物相关来源直接返回 false。
+     */
     @Inject(method = "getMobGriefingEvent", at = @At("HEAD"), cancellable = true, remap = false)
     private static void onGetMobGriefingEvent(Level level, @Nullable Entity entity, CallbackInfoReturnable<Boolean> cir) {
         if (entity instanceof Mob mob) {

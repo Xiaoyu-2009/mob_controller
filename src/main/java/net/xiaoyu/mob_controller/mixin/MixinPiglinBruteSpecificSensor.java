@@ -13,9 +13,17 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 import java.util.Optional;
+/**
+ * 猪灵蛮兵专用感知器注入。
+ *
+ * <p>受控猪灵蛮兵感知阶段清空最近可见仇敌记忆，避免误锁定友方。</p>
+ */
 
 @Mixin(PiglinBruteSpecificSensor.class)
 public abstract class MixinPiglinBruteSpecificSensor {
+    /**
+     * 包装 {@code Brain#setMemory}：受控猪灵蛮兵时清空最近可见仇敌记忆。
+     */
     @WrapOperation(method = "doTick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/LivingEntity;)V",
             at = @At(
                     value = "INVOKE",

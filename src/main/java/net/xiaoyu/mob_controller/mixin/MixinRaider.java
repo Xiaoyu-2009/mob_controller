@@ -10,6 +10,11 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+/**
+ * 袭击者袭击关联注入。
+ *
+ * <p>受控袭击者不再参与袭击逻辑。</p>
+ */
 
 @Mixin(Raider.class)
 public abstract class MixinRaider extends PatrollingMonster {
@@ -17,6 +22,9 @@ public abstract class MixinRaider extends PatrollingMonster {
         super(entityType, level);
     }
 
+    /**
+     * 注入 {@code getCurrentRaid} 返回点：受控袭击者返回空袭击实例。
+     */
     @Inject(method = "getCurrentRaid()Lnet/minecraft/world/entity/raid/Raid;", at = @At("RETURN"), cancellable = true)
     private void injectGetCurrentRaid(CallbackInfoReturnable<Raid> cir) {
         if (MobControlledData.isControlledEntity(this)) {

@@ -10,22 +10,50 @@ import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import java.util.function.Supplier;
+/**
+ * 客户端发送到服务端的“控制令”数据包。
+ *
+ * <p>用于请求将玩家周围已控制生物批量切换到指定控制模式。</p>
+ */
 
 public class ApplyControlCommandPacket {
+    /** 本次下发的目标控制模式。 */
     private final MobControlledData.ControlMode mode;
 
+    /**
+     * 使用指定控制模式构造数据包。
+     *
+     * @param mode 目标控制模式
+     */
     public ApplyControlCommandPacket(MobControlledData.ControlMode mode) {
         this.mode = mode;
     }
 
+    /**
+     * 从网络缓冲区反序列化数据包。
+     *
+     * @param buf 网络字节缓冲
+     */
     public ApplyControlCommandPacket(FriendlyByteBuf buf) {
         this.mode = MobControlledData.ControlMode.values()[buf.readVarInt()];
     }
 
+    /**
+     * 将数据包内容写入网络缓冲区。
+     *
+     * @param buf 网络字节缓冲
+     */
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeVarInt(this.mode.ordinal());
     }
 
+    /**
+     * 在服务端处理控制令请求。
+     *
+     * <p>仅当玩家主手持有“控制令”物品时生效，并在处理后向玩家反馈受影响生物数量。</p>
+     *
+     * @param ctx 网络上下文提供器
+     */
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();

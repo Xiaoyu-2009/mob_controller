@@ -14,6 +14,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+/**
+ * 生物基础行为注入。
+ *
+ * <p>处理受控生物每刻行为、目标选择限制与骑乘控制相关逻辑。</p>
+ */
 
 @Mixin(Mob.class)
 public abstract class MixinMob extends LivingEntity implements Targeting {
@@ -21,6 +26,9 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
         super(entityType, level);
     }
 
+    /**
+     * 注入 {@code tick} 头部：处理受控生物免转换、跟随/停留逻辑与坐标焊死。
+     */
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
         Mob mob = (Mob) (Object) this;
@@ -58,7 +66,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
     }
 
     /**
-     * 被控制的生物/其他生物中立
+     * 注入 {@code setTarget} 头部：限制受控生物与其他生物对目标的错误锁定。
      */
     @Inject(method = "setTarget", at = @At("HEAD"), cancellable = true)
     private void onSetTarget(LivingEntity target, CallbackInfo ci) {
@@ -90,7 +98,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
     }
 
     /**
-     * 被控制的远古守卫者/守卫者攻击解除限制
+     * 注入 {@code setTarget} 头部（守卫者特化）：保留有效光束目标。
      */
     @Inject(method = "setTarget", at = @At("HEAD"), cancellable = true)
     private void onSetTargetForGuardian(LivingEntity target, CallbackInfo ci) {
@@ -107,6 +115,9 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
         }
     }
 
+    /**
+     * 注入 {@code getControllingPassenger} 返回点：允许控制者作为骑乘操作者。
+     */
     @Inject(method = "getControllingPassenger()Lnet/minecraft/world/entity/LivingEntity;", at = @At("RETURN"), cancellable = true)
     private void injectGetControllingPassenger(CallbackInfoReturnable<LivingEntity> cir) {
         Object thiz = this;

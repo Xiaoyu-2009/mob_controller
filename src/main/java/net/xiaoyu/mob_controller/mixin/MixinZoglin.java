@@ -11,11 +11,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Optional;
-
+/**
+ * 僵尸疣猪兽行为注入。
+ *
+ * <p>受控僵尸疣猪兽不会攻击控制者，并清空自动寻敌结果。</p>
+ */
 @Mixin(Zoglin.class)
 public class MixinZoglin {
     /**
-     * 被控制的僵尸疣猪兽不攻击主人
+     * 注入 {@code doHurtTarget} 头部：目标为控制者时取消攻击。
      */
     @Inject(method = "doHurtTarget", at = @At("HEAD"), cancellable = true)
     private void onDoHurtTarget(Entity target, CallbackInfoReturnable<Boolean> cir) {
@@ -30,6 +34,9 @@ public class MixinZoglin {
         }
     }
 
+    /**
+     * 注入 {@code findNearestValidAttackTarget} 返回点：受控状态下不自动锁定目标。
+     */
     @Inject(method = "findNearestValidAttackTarget()Ljava/util/Optional;", at = @At("RETURN"), cancellable = true)
     private void injectFindNearestValidAttackTarget(CallbackInfoReturnable<Optional<? extends LivingEntity>> cir) {
         if (MobControlledData.isControlledEntity((Zoglin) (Object) this)) {

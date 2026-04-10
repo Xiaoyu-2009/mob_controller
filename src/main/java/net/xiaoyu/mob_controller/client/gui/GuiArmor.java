@@ -7,16 +7,30 @@ import net.minecraft.resources.ResourceLocation;
 import net.xiaoyu.mob_controller.MobController;
 import net.xiaoyu.mob_controller.inv.ContainerArmor;
 import net.minecraft.world.entity.player.Inventory;
-
+/**
+ * 受控生物装备编辑界面。
+ *
+ * <p>用于展示并编辑目标生物的主副手与护甲槽位。</p>
+ */
 public class GuiArmor extends AbstractContainerScreen<ContainerArmor> {
+    /** 菜单标题文本。 */
     private final Component chatComponent;
+    /** 界面背景纹理。 */
     private static final ResourceLocation armorGui = new ResourceLocation(MobController.MOD_ID, "textures/gui/armor.png");
 
+    /**
+     * 构造装备界面。
+     *
+     * @param container 菜单容器
+     * @param playerInv 玩家背包
+     * @param title     界面标题
+     */
     public GuiArmor(ContainerArmor container, Inventory playerInv, Component title) {
         super(container, playerInv, title);
         this.chatComponent = title;
     }
 
+    /** 渲染标题文本。 */
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(
@@ -25,12 +39,14 @@ public class GuiArmor extends AbstractContainerScreen<ContainerArmor> {
         );
     }
 
+    /** 渲染界面与工具提示。 */
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         super.render(graphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(graphics, mouseX, mouseY);
     }
 
+    /** 渲染背景纹理。 */
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
         int i = (this.width - this.imageWidth) / 2;

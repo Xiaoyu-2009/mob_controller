@@ -20,9 +20,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Predicate;
-
+/**
+ * 状态效果分发工具注入。
+ *
+ * <p>过滤受控生物触发的范围效果，避免对友方或不应受影响的玩家生效。</p>
+ */
 @Mixin(MobEffectUtil.class)
 public abstract class MixinMobEffectUtil {
+    /**
+     * 包装 {@code addEffectToPlayersAround} 内玩家筛选：为受控监守者/远古守卫者与友方过滤效果目标。
+     */
     @WrapOperation(method = "addEffectToPlayersAround(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/Vec3;DLnet/minecraft/world/effect/MobEffectInstance;I)Ljava/util/List;",
             at = @At(
                     value = "INVOKE",

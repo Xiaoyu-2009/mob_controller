@@ -28,16 +28,26 @@ import net.xiaoyu.mob_controller.registry.ModEffects;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
+/**
+ * 受控女巫实体。
+ *
+ * <p>替代原版女巫，支持可控实体队友治疗与主人阵营目标判定。</p>
+ */
 
 public class EntityControlledWitch extends Witch implements IControllableEntity {
+    /** 可治疗目标选择 AI。 */
     @Nullable
     protected GoalNearestHealableTarget<LivingEntity> goalNearestHealableTarget;
 
+    /**
+     * 构造受控女巫。
+     */
     public EntityControlledWitch(EntityType<? extends Witch> entityType, Level level) {
         super(entityType, level);
         this.setCanJoinRaid(false);
     }
 
+    /** 注册行为与目标 AI。 */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
@@ -63,6 +73,7 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         }
     }
 
+    /** 每刻更新并递减治疗目标冷却。 */
     @Override
     public void aiStep() {
         super.aiStep();
@@ -71,6 +82,9 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         }
     }
 
+    /**
+     * 执行投掷药水攻击/治疗逻辑。
+     */
     @Override
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
         if (!this.isDrinkingPotion()) {
@@ -114,16 +128,19 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         }
     }
 
+    /** 在和平模式下不自动消失。 */
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;
     }
 
+    /** 女巫可将同阵营单位视作可见目标（用于治疗）。 */
     @Override
     public boolean canSeeAsTarget(LivingEntity living) {
         return IControllableEntity.super.canSeeAsTarget(living) || IControllableEntity.super.isSameTeam(living);
     }
 
+    /** 获取主人 UUID。 */
     @Nullable
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
@@ -131,6 +148,7 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::getControllerUUID).orElse(null);
     }
 
+    /** 设置主人 UUID。 */
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public void setOwnerUUID(@Nullable UUID uuid) {
@@ -141,6 +159,7 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         });
     }
 
+    /** 判断是否受控。 */
     @Override
     public boolean isControlled() {
         return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::isControlled).orElse(false);

@@ -32,13 +32,27 @@ import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.Objects;
 import java.util.UUID;
+/**
+ * 生物控制系统的通用工具类。
+ *
+ * <p>主要提供被控制生物的跟随/停留行为处理、敌友判定、目标设置，
+ * 以及向玩家发送动作栏与标题提示等能力。</p>
+ */
 
 public class MobControlUtil {
+    /** 停留模式坐标焊死数据的持久化键。 */
     private static final String STAY_WELD_TAG = "mob_controller:stay_weld";
     private static final String STAY_WELD_X = "x";
     private static final String STAY_WELD_Y = "y";
     private static final String STAY_WELD_Z = "z";
 
+    /**
+     * 在每刻中处理被控制生物的跟随逻辑。
+     *
+     * <p>包含不同生物类型的差异化移动控制，以及距离过远时的安全传送。</p>
+     *
+     * @param mob 被控制生物
+     */
     public static void handleMobFollowing(Mob mob) {
 
         if (MobControlledData.isControlledEntity(mob)) {
@@ -179,11 +193,24 @@ public class MobControlUtil {
         return (float) (Mth.atan2(dz, dx) * (180.0F / (float) Math.PI)) - 90.0F;
     }
 
+    /**
+     * 判断当前生物在“停留”模式下是否需要应用飞行坐标焊死。
+     *
+     * @param mob 生物实体
+     * @return 若命中配置白名单则返回 {@code true}
+     */
     public static boolean shouldUseStayFlightWeld(Mob mob) {
         String entityId = EntityType.getKey(mob.getType()).toString();
         return Config.STAY_WELDED_SPECIAL_AI_MOBS.get().contains(entityId);
     }
 
+    /**
+     * 对飞行/特殊 AI 生物应用停留坐标焊死。
+     *
+     * <p>首次调用会记录当前位置，后续每次强制瞬移回记录坐标并清空速度。</p>
+     *
+     * @param mob 生物实体
+     */
     public static void applyStayFlightCoordinateWeld(Mob mob) {
         if (mob.getVehicle() != null) {
             return;
@@ -207,6 +234,11 @@ public class MobControlUtil {
         mob.teleportTo(stayWeldData.getDouble(STAY_WELD_X), stayWeldData.getDouble(STAY_WELD_Y), stayWeldData.getDouble(STAY_WELD_Z));
     }
 
+    /**
+     * 清除生物的停留坐标焊死数据。
+     *
+     * @param mob 生物实体
+     */
     public static void clearStayFlightCoordinateWeld(Mob mob) {
         mob.getPersistentData().remove(STAY_WELD_TAG);
     }
@@ -278,6 +310,13 @@ public class MobControlUtil {
         return null;
     }
 
+    /**
+     * 判定目标是否应被视为被控制生物的敌对对象。
+     *
+     * @param controlledMob 被控制生物
+     * @param target        目标实体，可为 {@code null}
+     * @return {@code true} 表示可视为敌对目标
+     */
     public static boolean isEnemy(LivingEntity controlledMob, @Nullable Entity target) {
         if (target == null) {
             return false;
@@ -325,7 +364,12 @@ public class MobControlUtil {
         return true;
     }
 
-    // 坚守者一些攻击
+    /**
+     * 设置生物攻击目标，并兼容监守者的愤怒系统。
+     *
+     * @param mob    发起攻击的生物
+     * @param target 目标实体
+     */
     public static void setMobTargetWithAnger(Mob mob, LivingEntity target) {
         if (mob instanceof Warden warden) {
             warden.increaseAngerAt(target, AngerLevel.ANGRY.getMinimumAnger() + 20, false);
@@ -335,7 +379,15 @@ public class MobControlUtil {
         }
     }
 
-    // 一些乱七八糟的文本...
+    /**
+     * 向玩家发送着色后的动作栏提示文本。
+     *
+     * @param player         目标玩家
+     * @param prefix         前缀文本，可为空字符串
+     * @param translationKey 语言键
+     * @param args           格式化参数
+     * @param color          文本颜色
+     */
     public static void showMessageToPlayer(Player player, String prefix, String translationKey, Object[] args, ChatFormatting color) {
         if (player instanceof ServerPlayer serverPlayer) {
             String text = Language.getInstance().getOrDefault(translationKey);
@@ -349,7 +401,14 @@ public class MobControlUtil {
         }
     }
 
-    // 显示控制状态 title（TODO#5）
+    /**
+     * 向玩家显示“控制模式切换”标题提示。
+     *
+     * @param player             目标玩家
+     * @param mobName            生物显示名组件
+     * @param modeTranslationKey 模式翻译键
+     * @param color              标题颜色
+     */
     public static void showControlModeTitle(Player player, Component mobName, String modeTranslationKey, ChatFormatting color) {
         if (player instanceof ServerPlayer serverPlayer) {
             Component title = Component.translatable(

@@ -15,15 +15,34 @@ import net.xiaoyu.mob_controller.MobController;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
 
 import javax.annotation.Nullable;
-
+/**
+ * 受控生物装备编辑菜单容器。
+ *
+ * <p>负责将目标生物的装备槽位映射到菜单，并与玩家背包联动。</p>
+ */
 public class ContainerArmor extends AbstractContainerMenu {
+    /** 受控生物装备容器实例。 */
     @Nullable
     private InventoryArmor inv;
 
+    /**
+     * 通过网络缓冲构造菜单。
+     *
+     * @param windowID  菜单窗口 ID
+     * @param playerInv 玩家背包
+     * @param buf       网络缓冲（读取目标实体 ID）
+     */
     public ContainerArmor(int windowID, Inventory playerInv, FriendlyByteBuf buf) {
         this(windowID, playerInv, playerInv.player.level().getEntity(buf.readInt()));
     }
 
+    /**
+     * 直接根据目标实体构造菜单。
+     *
+     * @param windowID  菜单窗口 ID
+     * @param playerInv 玩家背包
+     * @param e         目标实体
+     */
     public ContainerArmor(int windowID, Inventory playerInv, @Nullable Entity e) {
         super(ModMenuType.ARMOR_MENU.get(), windowID);
         if (!(e instanceof Mob living)) {
@@ -128,11 +147,17 @@ public class ContainerArmor extends AbstractContainerMenu {
         }
     }
 
+    /**
+     * 判断菜单是否仍可交互。
+     */
     @Override
     public boolean stillValid(Player player) {
         return true;
     }
 
+    /**
+     * 处理 shift 快速移动物品。
+     */
     @Override
     public ItemStack quickMoveStack(Player playerIn, int index) {
         ItemStack itemstack = ItemStack.EMPTY;

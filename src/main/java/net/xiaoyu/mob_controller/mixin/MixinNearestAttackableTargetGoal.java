@@ -15,9 +15,16 @@ import org.spongepowered.asm.mixin.injection.At;
 
 import javax.annotation.Nullable;
 import java.util.function.Predicate;
-
+/**
+ * 最近可攻击目标 AI 注入。
+ *
+ * <p>在目标谓词中追加受控生物敌友过滤，避免锁定友方目标。</p>
+ */
 @Mixin(NearestAttackableTargetGoal.class)
 public abstract class MixinNearestAttackableTargetGoal {
+    /**
+     * 包装 {@code TargetingConditions#selector}：拼接受控生物敌友过滤谓词。
+     */
     @WrapOperation(method = "<init>(Lnet/minecraft/world/entity/Mob;Ljava/lang/Class;IZZLjava/util/function/Predicate;)V",
             at = @At(
                     value = "INVOKE",

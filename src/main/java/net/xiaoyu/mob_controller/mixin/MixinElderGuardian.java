@@ -18,13 +18,20 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Objects;
-
+/**
+ * 远古守卫者行为注入。
+ *
+ * <p>受控远古守卫者在服务端 AI 步骤中对敌对玩家维持挖掘疲劳效果。</p>
+ */
 @Mixin(ElderGuardian.class)
 public abstract class MixinElderGuardian extends Guardian {
+    /** 挖掘疲劳持续时间。 */
     @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_EFFECT_DURATION = 6000;
+    /** 挖掘疲劳等级。 */
     @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER = 2;
+    /** 效果刷新阈值。 */
     @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_REFRESH_MARGIN = 40;
 
@@ -32,6 +39,9 @@ public abstract class MixinElderGuardian extends Guardian {
         super(entityType, level);
     }
 
+    /**
+     * 注入 {@code customServerAiStep} 返回点：为敌对玩家施加/刷新挖掘疲劳并播放远古守卫者提示事件。
+     */
     @Inject(method = "customServerAiStep()V", at = @At("RETURN"))
     private void injectCustomServerAiStep(CallbackInfo ci) {
         if (!MobControlledData.isControlledEntity(this) || this.tickCount % 20 != 0) {

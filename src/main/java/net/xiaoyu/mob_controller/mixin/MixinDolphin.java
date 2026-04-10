@@ -14,13 +14,20 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
+/**
+ * 海豚骑乘移动行为注入。
+ *
+ * <p>玩家骑乘海豚时接管移动与重力更新逻辑。</p>
+ */
 @Mixin(Dolphin.class)
 public abstract class MixinDolphin extends WaterAnimal {
     protected MixinDolphin(EntityType<? extends WaterAnimal> entityType, Level level) {
         super(entityType, level);
     }
 
+    /**
+     * 注入 {@code travel} 头部：骑乘时改用自定义移动流程。
+     */
     @Inject(method = "travel(Lnet/minecraft/world/phys/Vec3;)V", at = @At("HEAD"), cancellable = true)
     private void injectTravel(Vec3 travelVector, CallbackInfo ci) {
         if (this.getFirstPassenger() != null) {
@@ -31,6 +38,9 @@ public abstract class MixinDolphin extends WaterAnimal {
         }
     }
 
+    /**
+     * 注入 {@code tick} 头部：骑乘且离水时应用自定义重力与缓降处理。
+     */
     @Inject(method = "tick()V", at = @At("HEAD"))
     private void injectTick(CallbackInfo ci) {
         if (this.getFirstPassenger() != null) {

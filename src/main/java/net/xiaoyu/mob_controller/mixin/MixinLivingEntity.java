@@ -25,7 +25,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
+/**
+ * 生物实体通用行为注入。
+ *
+ * <p>扩展攻击判定、受伤反击与特定生物骑乘控制输入。</p>
+ */
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEntity extends Entity {
     @Shadow
@@ -38,6 +42,9 @@ public abstract class MixinLivingEntity extends Entity {
         super(entityType, level);
     }
 
+    /**
+     * 注入 {@code canAttack} 返回点：对受控生物追加敌友判定限制。
+     */
     @SuppressWarnings("ConstantValue")
     @Inject(method = "canAttack(Lnet/minecraft/world/entity/LivingEntity;)Z", at = @At("RETURN"), cancellable = true)
     private void injectCanAttack(LivingEntity target, CallbackInfoReturnable<Boolean> cir) {
@@ -50,6 +57,9 @@ public abstract class MixinLivingEntity extends Entity {
         }
     }
 
+    /**
+     * 注入 {@code hurt} 头部：拦截友伤并触发非受控生物反击受控生物。
+     */
     @Inject(method = "hurt", at = @At("HEAD"), cancellable = true)
     private void onHurt(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
         LivingEntity livingEntity = (LivingEntity) (Object) this;
@@ -85,6 +95,9 @@ public abstract class MixinLivingEntity extends Entity {
         }
     }
 
+    /**
+     * 注入 {@code tickRidden} 头部：同步部分可骑乘生物朝向。
+     */
     @Inject(method = "tickRidden(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/phys/Vec3;)V", at = @At("HEAD"))
     private void injectTickRidden(Player player, Vec3 travelVector, CallbackInfo ci) {
         Object thiz = this;
@@ -105,6 +118,9 @@ public abstract class MixinLivingEntity extends Entity {
         }
     }
 
+    /**
+     * 注入 {@code getRiddenInput} 头部：接管特定生物的骑乘输入向量。
+     */
     @Inject(method = "getRiddenInput(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;", at = @At("HEAD"), cancellable = true)
     private void injectGetRiddenInput(Player player, Vec3 travelVector, CallbackInfoReturnable<Vec3> cir) {
         Object thiz = this;
@@ -151,6 +167,9 @@ public abstract class MixinLivingEntity extends Entity {
         }
     }
 
+    /**
+     * 注入 {@code getRiddenSpeed} 头部：覆盖特定生物骑乘速度。
+     */
     @Inject(method = "getRiddenSpeed(Lnet/minecraft/world/entity/player/Player;)F", at = @At("HEAD"), cancellable = true)
     private void injectGetRiddenSpeed(Player player, CallbackInfoReturnable<Float> cir) {
         Object thiz = this;

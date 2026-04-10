@@ -10,22 +10,50 @@ import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import java.util.Objects;
 import java.util.function.Supplier;
+/**
+ * 客户端发送到服务端的“切换控制模式”数据包。
+ *
+ * <p>用于请求切换某个已被玩家控制生物的模式（跟随/停留/游荡）。</p>
+ */
 
 public class ToggleControlModePacket {
+    /** 目标生物实体 ID。 */
     private final int entityId;
 
+    /**
+     * 使用目标实体 ID 构造数据包。
+     *
+     * @param entityId 目标生物实体 ID
+     */
     public ToggleControlModePacket(int entityId) {
         this.entityId = entityId;
     }
 
+    /**
+     * 从网络缓冲区反序列化数据包。
+     *
+     * @param buf 网络字节缓冲
+     */
     public ToggleControlModePacket(FriendlyByteBuf buf) {
         this.entityId = buf.readInt();
     }
 
+    /**
+     * 将数据包编码到网络缓冲区。
+     *
+     * @param buf 网络字节缓冲
+     */
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeInt(this.entityId);
     }
 
+    /**
+     * 在服务端处理切换请求。
+     *
+     * <p>仅允许控制者本人切换自己受控生物的模式。</p>
+     *
+     * @param ctx 网络上下文提供器
+     */
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();

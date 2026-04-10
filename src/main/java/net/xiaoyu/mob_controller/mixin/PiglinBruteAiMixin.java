@@ -16,10 +16,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Optional;
 import java.util.UUID;
-
+/**
+ * 猪灵蛮兵 AI 行为注入。
+ *
+ * <p>受控猪灵蛮兵在寻找攻击目标时会移除与控制者相关的仇恨记忆。</p>
+ */
 @Mixin(PiglinBruteAi.class)
 public class PiglinBruteAiMixin {
-    // 被控制的猪灵蛮兵寻找目标行为
+    /**
+     * 注入 {@code findNearestValidAttackTarget} 头部：清除指向控制者的愤怒与目标记忆。
+     */
     @Inject(method = "findNearestValidAttackTarget", at = @At("HEAD"))
     private static void excludeOwnerFromTargeting(AbstractPiglin piglin, CallbackInfoReturnable<Optional<? extends LivingEntity>> cir) {
         PiglinBrute brute = (PiglinBrute) piglin;

@@ -27,13 +27,20 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
+/**
+ * 猪灵行为注入。
+ *
+ * <p>为受控猪灵补充友方火抗投掷逻辑，并限制仇恨与拾取行为。</p>
+ */
 @Mixin(Piglin.class)
 public abstract class MixinPiglin extends AbstractPiglin implements CrossbowAttackMob, InventoryCarrier {
     public MixinPiglin(EntityType<? extends AbstractPiglin> entityType, Level level) {
         super(entityType, level);
     }
 
+    /**
+     * 注入 {@code performRangedAttack} 头部：对友方投掷抗火药水并取消原始弩攻击。
+     */
     @Inject(method = "performRangedAttack(Lnet/minecraft/world/entity/LivingEntity;F)V", at = @At("HEAD"), cancellable = true)
     private void injectPerformRangedAttack(LivingEntity target, float distanceFactor, CallbackInfo ci) {
         if (MobControlledData.isControlledEntity(this) && !MobControlUtil.isEnemy(this, target)) {
@@ -59,6 +66,9 @@ public abstract class MixinPiglin extends AbstractPiglin implements CrossbowAtta
         }
     }
 
+    /**
+     * 注入 {@code customServerAiStep} 头部：周期性为着火友方补投抗火药水。
+     */
     @Inject(method = "customServerAiStep()V", at = @At("HEAD"))
     private void injectCustomServerAiStep(CallbackInfo ci) {
         if (MobControlledData.isControlledEntity(this) && this.getPersistentData().getLong("mob_controller.piglinFireResistancePotion") < this.tickCount) {
@@ -78,6 +88,9 @@ public abstract class MixinPiglin extends AbstractPiglin implements CrossbowAtta
         }
     }
 
+    /**
+     * 包装 {@code wantsToPickUp}：受控猪灵仅允许拾取猪灵货币。
+     */
     @WrapOperation(method = "wantsToPickUp(Lnet/minecraft/world/item/ItemStack;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/piglin/Piglin;canPickUpLoot()Z"))
     private boolean wrapOperationWantsToPickUp(Piglin instance, Operation<Boolean> original, @Local(argsOnly = true) ItemStack itemStack) {
         if (MobControlledData.isControlledEntity(instance)) {

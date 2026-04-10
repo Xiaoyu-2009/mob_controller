@@ -12,10 +12,17 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
+/**
+ * 玩家交互行为注入。
+ *
+ * <p>将原版交互流程桥接到生物控制器物品逻辑。</p>
+ */
 @Mixin(Player.class)
 public class PlayerMixin {
 
+    /**
+     * 注入 {@code interactOn} 头部：当手持生物控制器且目标是生物时，优先走控制逻辑。
+     */
     @Inject(method = "interactOn", at = @At("HEAD"), cancellable = true)
     private void onInteractOn(Entity entity, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         Player player = (Player) (Object) this;

@@ -22,11 +22,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
+/**
+ * 维护“被控制生物”的运行时数据与全局辅助逻辑。
+ *
+ * <p>该类负责：</p>
+ * <ul>
+ *   <li>记录玩家已控制的高生命值生物类型，限制同类重复控制；</li>
+ *   <li>读写生物控制状态（控制者、模式、系统攻击标记）；</li>
+ *   <li>安排并处理生物死亡后的延迟重生。</li>
+ * </ul>
+ */
 public class MobControlledData {
+    /** 玩家 -> 已控制的高生命值生物类型集合。 */
     private static final Map<UUID, Set<EntityType<?>>> PLAYER_CONTROLLED_HIGH_HEALTH_MOBS = new ConcurrentHashMap<>();
+    /** 待执行的延迟重生任务。键为死亡生物 UUID。 */
     private static final Map<UUID, PendingRespawnData> PENDING_RESPAWNS = new ConcurrentHashMap<>();
+    /** 判定为“高生命值生物”的生命值阈值。 */
     public static final int HIGH_HEALTH_THRESHOLD = 150;
+    /** 生物死亡后触发重生的延迟刻数（600 tick = 30 秒）。 */
     public static final int RESPAWN_DELAY_TICKS = 600;
 
     private record PendingRespawnData(UUID deadMobUUID, UUID controllerUUID, CompoundTag entityNbt,
@@ -35,6 +48,9 @@ public class MobControlledData {
                                       BlockPos deathPos) {
     }
 
+    /**
+     * 控制模式。
+     */
     public enum ControlMode {
         /**
          * 跟随
@@ -50,6 +66,12 @@ public class MobControlledData {
         WANDER,
     }
 
+    /**
+     * 将生物加入控制状态，并初始化为“跟随”模式。
+     *
+     * @param controllerUUID 控制者玩家 UUID
+     * @param mob            目标生物
+     */
     public static void addControlledMob(UUID controllerUUID, Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> {
@@ -68,6 +90,12 @@ public class MobControlledData {
         }
     }
 
+    /**
+     * 释放对生物的控制并清理相关标记。
+     *
+     * @param mob 要释放的生物
+     * @return {@code true} 表示该生物存在控制能力并已执行释放流程
+     */
     public static boolean releaseControl(Mob mob) {
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID == null) {
@@ -89,6 +117,13 @@ public class MobControlledData {
         return mob.getMaxHealth() > HIGH_HEALTH_THRESHOLD;
     }
 
+    /**
+     * 判断玩家是否已经控制过同类型的高生命值生物。
+     *
+     * @param playerUUID 玩家 UUID
+     * @param mob        准备控制的目标生物
+     * @return 若目标为高生命值生物且该玩家已控制同类型生物则返回 {@code true}
+     */
     public static boolean hasPlayerControlledSameHighHealthMob(UUID playerUUID, Mob mob) {
         if (!isHighHealthMob(mob)) {
             return false;
@@ -99,6 +134,11 @@ public class MobControlledData {
     }
 
     // 列表中移除[被控制的生物死亡]
+    /**
+     * 在被控制生物死亡时移除高生命值控制记录。
+     *
+     * @param mob 死亡生物
+     */
     public static void removeControlledMobOnDeath(Mob mob) {
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID != null) {
@@ -120,16 +160,35 @@ public class MobControlledData {
         }
     }
 
+    /**
+     * 判断生物是否处于被控制状态。
+     *
+     * @param mob 生物实体
+     * @return {@code true} 表示存在控制者
+     */
     public static boolean isControlledEntity(LivingEntity mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isControlled).orElse(false);
     }
 
+    /**
+     * 获取生物的控制者 UUID。
+     *
+     * @param mob 生物实体
+     * @return 控制者 UUID；若未被控制则返回 {@code null}
+     */
     public static @Nullable UUID getControllerUUID(LivingEntity mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::getControllerUUID).orElse(null);
     }
 
+    /**
+     * 在给定维度内查找生物对应的控制者玩家对象。
+     *
+     * @param mob   生物实体
+     * @param level 查询所用世界
+     * @return 控制者玩家；未找到时返回 {@code null}
+     */
     @Nullable
     public static Player getController(LivingEntity mob, Level level) {
         UUID controllerUUID = getControllerUUID(mob);
@@ -144,16 +203,34 @@ public class MobControlledData {
         return null;
     }
 
+    /**
+     * 设置生物的控制模式。
+     *
+     * @param mob  生物实体
+     * @param mode 目标控制模式
+     */
     public static void setControlMode(Mob mob, ControlMode mode) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setControlMode(mode));
     }
 
+    /**
+     * 获取生物当前控制模式。
+     *
+     * @param mob 生物实体
+     * @return 当前模式；若能力缺失则回退为 {@link ControlMode#FOLLOW}
+     */
     public static ControlMode getControlMode(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::getControlMode).orElse(ControlMode.FOLLOW);
     }
 
+    /**
+     * 按顺序循环切换控制模式（跟随 -> 停留 -> 游荡 -> 跟随）。
+     *
+     * @param mob 生物实体
+     * @return 切换后的新模式
+     */
     public static ControlMode toggleControlMode(Mob mob) {
         ControlMode currentMode = getControlMode(mob);
         int index = currentMode.ordinal() + 1;
@@ -162,21 +239,46 @@ public class MobControlledData {
         return newMode;
     }
 
+    /**
+     * 标记该生物当前攻击为系统触发。
+     *
+     * @param mob 生物实体
+     */
     public static void markSystemAttack(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setSystemAttack(true));
     }
 
+    /**
+     * 清除系统攻击标记。
+     *
+     * @param mob 生物实体
+     */
     public static void clearSystemAttack(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setSystemAttack(false));
     }
 
+    /**
+     * 查询系统攻击标记。
+     *
+     * @param mob 生物实体
+     * @return {@code true} 表示当前攻击被标记为系统触发
+     */
     public static boolean isSystemAttack(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isSystemAttack).orElse(false);
     }
 
+    /**
+     * 为死亡生物创建延迟重生任务。
+     *
+     * <p>会保存实体 NBT 与能力 NBT，在 {@link #tickPendingRespawns(MinecraftServer)} 中恢复。</p>
+     *
+     * @param mob   死亡生物
+     * @param level 当前服务端世界
+     * @return {@code true} 表示成功加入待重生队列
+     */
     public static boolean scheduleRespawn(Mob mob, ServerLevel level) {
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID == null || PENDING_RESPAWNS.containsKey(mob.getUUID())) {
@@ -202,6 +304,11 @@ public class MobControlledData {
         return true;
     }
 
+    /**
+     * 每刻处理待重生队列，时间到达后尝试生成并恢复生物状态。
+     *
+     * @param server 当前服务端实例
+     */
     public static void tickPendingRespawns(MinecraftServer server) {
         int currentTick = server.getTickCount();
 
