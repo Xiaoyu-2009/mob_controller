@@ -1,5 +1,11 @@
 package net.xiaoyu.mob_controller.util;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -19,7 +25,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MobControlledData {
     private static final Map<UUID, Set<EntityType<?>>> PLAYER_CONTROLLED_HIGH_HEALTH_MOBS = new ConcurrentHashMap<>();
+    private static final Map<UUID, PendingRespawnData> PENDING_RESPAWNS = new ConcurrentHashMap<>();
     public static final int HIGH_HEALTH_THRESHOLD = 150;
+    public static final int RESPAWN_DELAY_TICKS = 600;
+
+    private record PendingRespawnData(UUID deadMobUUID, UUID controllerUUID, CompoundTag entityNbt,
+                                      CompoundTag capabilityNbt, int triggerTick,
+                                      net.minecraft.resources.ResourceKey<Level> deathDimension,
+                                      BlockPos deathPos) {
+    }
 
     public enum ControlMode {
         /**
@@ -161,5 +175,71 @@ public class MobControlledData {
     public static boolean isSystemAttack(Mob mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isSystemAttack).orElse(false);
+    }
+
+    public static boolean scheduleRespawn(Mob mob, ServerLevel level) {
+        UUID controllerUUID = getControllerUUID(mob);
+        if (controllerUUID == null || PENDING_RESPAWNS.containsKey(mob.getUUID())) {
+            return false;
+        }
+
+        CompoundTag entityNbt = mob.saveWithoutId(new CompoundTag());
+        entityNbt.putString("id", EntityType.getKey(mob.getType()).toString());
+
+        CompoundTag capabilityNbt = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+                .map(MobControlCapability::serializeNBT)
+                .orElse(new CompoundTag());
+
+        PENDING_RESPAWNS.put(mob.getUUID(), new PendingRespawnData(
+                mob.getUUID(),
+                controllerUUID,
+                entityNbt,
+                capabilityNbt,
+                level.getServer().getTickCount() + RESPAWN_DELAY_TICKS,
+                level.dimension(),
+                mob.blockPosition()
+        ));
+        return true;
+    }
+
+    public static void tickPendingRespawns(MinecraftServer server) {
+        int currentTick = server.getTickCount();
+
+        for (Map.Entry<UUID, PendingRespawnData> entry : PENDING_RESPAWNS.entrySet()) {
+            PendingRespawnData data = entry.getValue();
+            if (data.triggerTick() > currentTick) {
+                continue;
+            }
+
+            ServerPlayer controller = server.getPlayerList().getPlayer(data.controllerUUID());
+            ServerLevel targetLevel = controller != null ? controller.serverLevel() : server.getLevel(data.deathDimension());
+
+            if (targetLevel == null) {
+                continue;
+            }
+
+            CompoundTag nbt = data.entityNbt().copy();
+            java.util.Optional<Entity> createdEntity = EntityType.create(nbt, targetLevel);
+            if (createdEntity.isPresent() && createdEntity.get() instanceof Mob respawnedMob) {
+                if (controller != null) {
+                    respawnedMob.moveTo(controller.getX(), controller.getY(), controller.getZ(), respawnedMob.getYRot(), respawnedMob.getXRot());
+                } else {
+                    respawnedMob.moveTo(data.deathPos().getX() + 0.5D, data.deathPos().getY(), data.deathPos().getZ() + 0.5D,
+                            respawnedMob.getYRot(), respawnedMob.getXRot());
+                }
+
+                respawnedMob.setDeltaMovement(0, 0, 0);
+                respawnedMob.setHealth(respawnedMob.getMaxHealth());
+                respawnedMob.setTarget(null);
+                targetLevel.addFreshEntity(respawnedMob);
+
+                addControlledMob(data.controllerUUID(), respawnedMob);
+                respawnedMob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+                        .ifPresent(cap -> cap.deserializeNBT(data.capabilityNbt().copy()));
+                clearSystemAttack(respawnedMob);
+            }
+
+            PENDING_RESPAWNS.remove(entry.getKey());
+        }
     }
 }

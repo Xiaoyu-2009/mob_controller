@@ -3,6 +3,7 @@ package net.xiaoyu.mob_controller.event;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -30,9 +31,11 @@ import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.EntityMobGriefingEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -110,6 +113,25 @@ public class MobControllerEvent {
             if (MobControlledData.isControlledEntity(mob)) {
                 MobControlledData.removeControlledMobOnDeath(mob);
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof Mob mob && mob.level() instanceof ServerLevel serverLevel
+                && MobControlledData.isControlledEntity(mob)) {
+            if (MobControlledData.scheduleRespawn(mob, serverLevel)) {
+                MinecraftServer server = serverLevel.getServer();
+                String message = mob.getDisplayName().getString() + "死了，将在30秒后复活";
+                server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), "say " + message);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            MobControlledData.tickPendingRespawns(event.getServer());
         }
     }
 
