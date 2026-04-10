@@ -2,6 +2,7 @@ package net.xiaoyu.mob_controller.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -340,6 +341,10 @@ public class MobControlledData {
                 respawnedMob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
                     .ifPresent(cap -> cap.deserializeNBT(data.capabilityNbt().copy()));
                 clearSystemAttack(respawnedMob);
+
+                if (controller != null) {
+                    controller.sendSystemMessage(Component.translatable("mob_controller.message.respawned", respawnedMob.getDisplayName()));
+                }
             }
 
             PENDING_RESPAWNS.remove(entry.getKey());

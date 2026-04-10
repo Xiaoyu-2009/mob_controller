@@ -2,9 +2,10 @@ package net.xiaoyu.mob_controller.event;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -133,9 +134,10 @@ public class MobControllerEvent {
         if (event.getEntity() instanceof Mob mob && mob.level() instanceof ServerLevel serverLevel
             && MobControlledData.isControlledEntity(mob)) {
             if (MobControlledData.scheduleRespawn(mob, serverLevel)) {
-                MinecraftServer server = serverLevel.getServer();
-                String message = mob.getDisplayName().getString() + "死了，将在30秒后复活";
-                server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), "say " + message);
+                Player controller = MobControlledData.getController(mob, serverLevel);
+                if (controller instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.sendSystemMessage(Component.translatable("mob_controller.message.respawn_scheduled", mob.getDisplayName()));
+                }
             }
         }
     }

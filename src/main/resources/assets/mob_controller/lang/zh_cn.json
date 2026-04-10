@@ -12,6 +12,8 @@
   "mob_controller.mode.follow": "跟随中",
   "mob_controller.mode.stay": "停留中",
   "mob_controller.mode.wander": "游荡中",
-  "mob_controller.title.control_mode": "%1$s%2$s",
+  "mob_controller.message.respawn_scheduled": "%s 死了，将在30秒后复活",
+  "mob_controller.message.respawned": "%s 复活了",
+  "mob_controller.title.control_mode": "%1$s %2$s",
   "mob_controller.tooltip.armor": "手持时鼠标右键实体以编辑TA的盔甲和物品栏。"
 }

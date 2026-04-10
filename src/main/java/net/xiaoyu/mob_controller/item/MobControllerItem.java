@@ -151,20 +151,13 @@ public class MobControllerItem extends Item {
             Level level = player.level();
 
             if (!level.isClientSide) {
-                /*if (MobControlledData.isControlledMob(mob) && MobControlledData.getControllerUUID(mob).equals(player.getUUID())) {
-                    if (player.isShiftKeyDown()) {
+                if (MobControlledData.isControlledEntity(mob)) {
+                    if (player.getUUID().equals(MobControlledData.getControllerUUID(mob))) {
                         MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
-                        String mobName = mob.getDisplayName().getString();
-
-                        String modeKey = (newMode == MobControlledData.ControlMode.FOLLOW) ? "mob_controller.mode.follow" : "mob_controller.mode.stay";
-
-                        MobControlUtil.showMessageToPlayer(player, mobName, modeKey, new Object[]{}, ChatFormatting.GOLD);
-
+                        String modeKey = "mob_controller.mode." + newMode.toString().toLowerCase();
+                        MobControlUtil.showMessageToPlayer(player, mob.getDisplayName().getString(), modeKey, new Object[]{}, ChatFormatting.GOLD);
                         return InteractionResult.SUCCESS;
                     }
-                }*/
-
-                if (MobControlledData.isControlledEntity(mob)) {
                     return InteractionResult.PASS;
                 }
 
@@ -198,7 +191,7 @@ public class MobControllerItem extends Item {
                     mob.setTarget(null);
                     // 控制成功
                     controlMob(player, mob);
-                    MobControlUtil.showControlModeTitle(player, mob.getDisplayName(), "mob_controller.mode.follow", ChatFormatting.GOLD);
+                    MobControlUtil.showMessageToPlayer(player, mob.getDisplayName().getString(), "mob_controller.mode.follow", new Object[]{}, ChatFormatting.GOLD);
                     spawnParticles(mob, true);
                     return InteractionResult.SUCCESS;
                 } else {
