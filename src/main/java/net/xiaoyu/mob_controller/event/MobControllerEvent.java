@@ -24,6 +24,7 @@ import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.monster.piglin.PiglinBrute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
@@ -46,6 +47,7 @@ import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
 import net.xiaoyu.mob_controller.network.ApplyControlCommandPacket;
 import net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket;
 import net.xiaoyu.mob_controller.network.NetWorkManager;
+import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
 import net.xiaoyu.mob_controller.registry.ModItems;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
@@ -375,23 +377,30 @@ public class MobControllerEvent {
     public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Post event) {
         Minecraft mc = Minecraft.getInstance();
 
-        if (mc.player == null || mc.screen != null || !mc.player.getMainHandItem().is(ModItems.CONTROL_COMMAND_ITEM.get())) {
+        if (mc.player == null || mc.screen != null || event.getAction() != InputConstants.RELEASE) {
             return;
         }
 
-        if (event.getAction() != InputConstants.RELEASE) {
+        if (mc.player.getMainHandItem().is(ModItems.CONTROL_COMMAND_ITEM.get())) {
+            MobControlledData.ControlMode mode = switch (event.getButton()) {
+                case InputConstants.MOUSE_BUTTON_LEFT -> MobControlledData.ControlMode.FOLLOW;
+                case InputConstants.MOUSE_BUTTON_RIGHT -> MobControlledData.ControlMode.STAY;
+                case InputConstants.MOUSE_BUTTON_MIDDLE -> MobControlledData.ControlMode.WANDER;
+                default -> null;
+            };
+
+            if (mode != null) {
+                NetWorkManager.INSTANCE.sendToServer(new ApplyControlCommandPacket(mode));
+            }
             return;
         }
 
-        MobControlledData.ControlMode mode = switch (event.getButton()) {
-            case InputConstants.MOUSE_BUTTON_LEFT -> MobControlledData.ControlMode.FOLLOW;
-            case InputConstants.MOUSE_BUTTON_RIGHT -> MobControlledData.ControlMode.STAY;
-            case InputConstants.MOUSE_BUTTON_MIDDLE -> MobControlledData.ControlMode.WANDER;
-            default -> null;
-        };
-
-        if (mode != null) {
-            NetWorkManager.INSTANCE.sendToServer(new ApplyControlCommandPacket(mode));
+        if (event.getButton() == InputConstants.MOUSE_BUTTON_RIGHT
+            && mc.hitResult instanceof EntityHitResult entityHitResult
+            && entityHitResult.getEntity() instanceof Mob mob
+            && !mc.player.getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())
+            && !mc.player.getMainHandItem().is(ModItems.HEART_CONTRACT_ITEM.get())) {
+            NetWorkManager.INSTANCE.sendToServer(new ToggleControlModePacket(mob.getId()));
         }
     }
 

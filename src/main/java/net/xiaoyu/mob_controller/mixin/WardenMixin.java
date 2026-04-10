@@ -4,6 +4,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
@@ -49,9 +50,22 @@ public class WardenMixin {
             // 被控制的监守者取消对非敌对目标的攻击欲望
             if (MobControlledData.isControlledEntity(warden)) {
                 if (!MobControlUtil.isEnemy(warden, livingEntity)) {
-                    info.cancel();
+                    info.setReturnValue(false);
                 }
             }
+        }
+    }
+
+    /**
+     * 注入 {@code increaseAngerAt} 头部：受控监守者忽略由振动系统触发的激怒。
+     */
+    @Inject(method = "increaseAngerAt(Lnet/minecraft/world/entity/Entity;IZ)V", at = @At("HEAD"), cancellable = true)
+    private void ignoreVibrationAngerWhenControlled(@Nullable Entity entity, int offset, boolean playListeningSound, CallbackInfo ci) {
+        Warden warden = (Warden) (Object) this;
+        if (MobControlledData.isControlledEntity(warden)
+            && playListeningSound
+            && warden.getBrain().hasMemoryValue(MemoryModuleType.VIBRATION_COOLDOWN)) {
+            ci.cancel();
         }
     }
 
@@ -62,7 +76,22 @@ public class WardenMixin {
     private void injectControlledWardenDarkness(CallbackInfo ci) {
         Warden warden = (Warden) (Object) this;
 
-        if (!MobControlledData.isControlledEntity(warden) || (warden.tickCount + warden.getId()) % 20 != 0) {
+        if (!MobControlledData.isControlledEntity(warden)) {
+            return;
+        }
+
+        LivingEntity currentTarget = warden.getTarget();
+        if (currentTarget != null && !MobControlUtil.isEnemy(warden, currentTarget)) {
+            warden.setTarget(null);
+            warden.clearAnger(currentTarget);
+        }
+
+        Optional<LivingEntity> currentAngryTarget = warden.getEntityAngryAt();
+        if (currentAngryTarget.isPresent() && !MobControlUtil.isEnemy(warden, currentAngryTarget.get())) {
+            warden.clearAnger(currentAngryTarget.get());
+        }
+
+        if ((warden.tickCount + warden.getId()) % 20 != 0) {
             return;
         }
 

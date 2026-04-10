@@ -152,12 +152,6 @@ public class MobControllerItem extends Item {
 
             if (!level.isClientSide) {
                 if (MobControlledData.isControlledEntity(mob)) {
-                    if (player.getUUID().equals(MobControlledData.getControllerUUID(mob))) {
-                        MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
-                        String modeKey = "mob_controller.mode." + newMode.toString().toLowerCase();
-                        MobControlUtil.showMessageToPlayer(player, mob.getDisplayName().getString(), modeKey, new Object[]{}, ChatFormatting.GOLD);
-                        return InteractionResult.SUCCESS;
-                    }
                     return InteractionResult.PASS;
                 }
 

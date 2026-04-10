@@ -1,8 +1,14 @@
 package net.xiaoyu.mob_controller.util;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,11 +19,17 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.common.util.LazyOptional;
 import net.xiaoyu.mob_controller.capability.MobControlCapability;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -51,6 +63,11 @@ public class MobControlledData {
      * 待执行的延迟重生任务。键为死亡生物 UUID。
      */
     private static final Map<UUID, PendingRespawnData> PENDING_RESPAWNS = new ConcurrentHashMap<>();
+    private static final String PENDING_RESPAWN_TAG = "pending_respawns";
+    private static final String PENDING_RESPAWN_DATA_DIR = "mob_controller";
+    private static final String PENDING_RESPAWN_FILE = "pending_respawns.dat";
+    @Nullable
+    private static Path loadedPendingRespawnFile;
 
     /**
      * 将生物加入控制状态，并初始化为“跟随”模式。
@@ -267,6 +284,9 @@ public class MobControlledData {
      * @return {@code true} 表示成功加入待重生队列
      */
     public static boolean scheduleRespawn(Mob mob, ServerLevel level) {
+        MinecraftServer server = level.getServer();
+        ensurePendingRespawnsLoaded(server);
+
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID == null || PENDING_RESPAWNS.containsKey(mob.getUUID())) {
             return false;
@@ -285,11 +305,12 @@ public class MobControlledData {
                 controllerUUID,
                 entityNbt,
                 capabilityNbt,
-                level.getServer().getTickCount() + RESPAWN_DELAY_TICKS,
+                server.getTickCount() + RESPAWN_DELAY_TICKS,
                 level.dimension(),
                 mob.blockPosition()
             )
         );
+        savePendingRespawns(server);
         return true;
     }
 
@@ -299,7 +320,9 @@ public class MobControlledData {
      * @param server 当前服务端实例
      */
     public static void tickPendingRespawns(MinecraftServer server) {
+        ensurePendingRespawnsLoaded(server);
         int currentTick = server.getTickCount();
+        Set<UUID> completedRespawns = new HashSet<>();
 
         for (Map.Entry<UUID, PendingRespawnData> entry : PENDING_RESPAWNS.entrySet()) {
             PendingRespawnData data = entry.getValue();
@@ -347,7 +370,108 @@ public class MobControlledData {
                 }
             }
 
-            PENDING_RESPAWNS.remove(entry.getKey());
+            completedRespawns.add(entry.getKey());
+        }
+
+        if (!completedRespawns.isEmpty()) {
+            for (UUID deadMobUUID : completedRespawns) {
+                PENDING_RESPAWNS.remove(deadMobUUID);
+            }
+            savePendingRespawns(server);
+        }
+    }
+
+    private static void ensurePendingRespawnsLoaded(MinecraftServer server) {
+        Path filePath = getPendingRespawnFilePath(server);
+        if (!filePath.equals(loadedPendingRespawnFile)) {
+            loadPendingRespawns(server, filePath);
+            loadedPendingRespawnFile = filePath;
+        }
+    }
+
+    private static Path getPendingRespawnFilePath(MinecraftServer server) {
+        return server.getWorldPath(LevelResource.ROOT)
+            .resolve("data")
+            .resolve(PENDING_RESPAWN_DATA_DIR)
+            .resolve(PENDING_RESPAWN_FILE);
+    }
+
+    private static void loadPendingRespawns(MinecraftServer server, Path filePath) {
+        PENDING_RESPAWNS.clear();
+        if (!Files.exists(filePath)) {
+            return;
+        }
+
+        try (InputStream inputStream = Files.newInputStream(filePath)) {
+            CompoundTag rootTag = NbtIo.readCompressed(inputStream);
+            if (rootTag == null || !rootTag.contains(PENDING_RESPAWN_TAG, Tag.TAG_LIST)) {
+                return;
+            }
+
+            ListTag pendingList = rootTag.getList(PENDING_RESPAWN_TAG, Tag.TAG_COMPOUND);
+            for (int i = 0; i < pendingList.size(); i++) {
+                CompoundTag respawnTag = pendingList.getCompound(i);
+                if (!respawnTag.hasUUID("deadMobUUID") || !respawnTag.hasUUID("controllerUUID")) {
+                    continue;
+                }
+
+                ResourceLocation dimensionLocation = ResourceLocation.tryParse(respawnTag.getString("deathDimension"));
+                if (dimensionLocation == null) {
+                    continue;
+                }
+
+                UUID deadMobUUID = respawnTag.getUUID("deadMobUUID");
+                UUID controllerUUID = respawnTag.getUUID("controllerUUID");
+                CompoundTag entityNbt = respawnTag.getCompound("entityNbt");
+                CompoundTag capabilityNbt = respawnTag.getCompound("capabilityNbt");
+                int remainingTicks = Math.max(0, respawnTag.getInt("remainingTicks"));
+                ResourceKey<Level> deathDimension = ResourceKey.create(Registries.DIMENSION, dimensionLocation);
+                BlockPos deathPos = BlockPos.of(respawnTag.getLong("deathPos"));
+
+                PENDING_RESPAWNS.put(
+                    deadMobUUID,
+                    new PendingRespawnData(
+                        deadMobUUID,
+                        controllerUUID,
+                        entityNbt,
+                        capabilityNbt,
+                        server.getTickCount() + remainingTicks,
+                        deathDimension,
+                        deathPos
+                    )
+                );
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static void savePendingRespawns(MinecraftServer server) {
+        Path filePath = getPendingRespawnFilePath(server);
+        try {
+            Files.createDirectories(filePath.getParent());
+
+            CompoundTag rootTag = new CompoundTag();
+            ListTag pendingList = new ListTag();
+            int currentTick = server.getTickCount();
+
+            for (PendingRespawnData data : PENDING_RESPAWNS.values()) {
+                CompoundTag respawnTag = new CompoundTag();
+                respawnTag.putUUID("deadMobUUID", data.deadMobUUID());
+                respawnTag.putUUID("controllerUUID", data.controllerUUID());
+                respawnTag.put("entityNbt", data.entityNbt().copy());
+                respawnTag.put("capabilityNbt", data.capabilityNbt().copy());
+                respawnTag.putInt("remainingTicks", Math.max(0, data.triggerTick() - currentTick));
+                respawnTag.putString("deathDimension", data.deathDimension().location().toString());
+                respawnTag.putLong("deathPos", data.deathPos().asLong());
+                pendingList.add(respawnTag);
+            }
+
+            rootTag.put(PENDING_RESPAWN_TAG, pendingList);
+
+            try (OutputStream outputStream = Files.newOutputStream(filePath)) {
+                NbtIo.writeCompressed(rootTag, outputStream);
+            }
+        } catch (IOException ignored) {
         }
     }
 
@@ -372,7 +496,7 @@ public class MobControlledData {
     private record PendingRespawnData(
         UUID deadMobUUID, UUID controllerUUID, CompoundTag entityNbt,
         CompoundTag capabilityNbt, int triggerTick,
-        net.minecraft.resources.ResourceKey<Level> deathDimension,
+        ResourceKey<Level> deathDimension,
         BlockPos deathPos
     ) {
     }
