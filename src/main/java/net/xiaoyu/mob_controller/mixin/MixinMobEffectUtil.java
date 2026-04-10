@@ -10,6 +10,7 @@ import net.minecraft.world.effect.MobEffectUtil;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.ElderGuardian;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
@@ -36,6 +37,10 @@ public abstract class MixinMobEffectUtil {
         }
 
         if (mob instanceof Warden && MobControlledData.isControlledEntity(mob) && effect.getEffect() == MobEffects.DARKNESS) {
+            return List.of();
+        }
+
+        if (mob instanceof ElderGuardian && MobControlledData.isControlledEntity(mob) && effect.getEffect() == MobEffects.DIG_SLOWDOWN) {
             return List.of();
         }
 
