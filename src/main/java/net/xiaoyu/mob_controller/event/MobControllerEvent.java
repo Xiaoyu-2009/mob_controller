@@ -177,9 +177,10 @@ public class MobControllerEvent {
                     else if (mob instanceof AbstractPiglin) {
                         Brain<?> brain = mob.getBrain();
                         Optional<LivingEntity> attackTarget = brain.getMemory(MemoryModuleType.ATTACK_TARGET);
-                        hasValidTarget = brain.getMemory(MemoryModuleType.ANGRY_AT)
-                                             .isPresent() && attackTarget.isPresent() && attackTarget.get().isAlive() && !attackTarget.get()
-                            .isDeadOrDying();
+                        hasValidTarget = brain.getMemory(MemoryModuleType.ANGRY_AT).isPresent()
+                                         && attackTarget.isPresent()
+                                         && attackTarget.get().isAlive()
+                                         && !attackTarget.get().isDeadOrDying();
                     } else {
                         LivingEntity target = mob.getTarget();
                         hasValidTarget = target != null && target.isAlive() && !target.isDeadOrDying();
