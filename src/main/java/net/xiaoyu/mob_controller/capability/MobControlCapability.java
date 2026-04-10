@@ -14,6 +14,7 @@ import javax.annotation.Nullable;
  *   <li><b>controllerUUID</b>：控制者（玩家）的 UUID，{@code null} 表示该生物当前未被控制；</li>
  *   <li><b>controlMode</b>：当前控制模式（跟随 / 停留 / 游荡）；</li>
  *   <li><b>lastHealTime</b>：上一次被治愈的游戏时间刻，用于冷却计算；</li>
+ *   <li><b>lastCombatTime</b>：最近一次进入战斗/发生交战的游戏时间刻，用于脱战判定；</li>
  *   <li><b>isSystemAttack</b>：标记当前攻击是否由系统（非玩家手动指令）发起，
  *       用于区分仇恨源头。</li>
  * </ul>
@@ -30,6 +31,7 @@ public class MobControlCapability {
     private UUID controllerUUID = null;
     private MobControlledData.ControlMode controlMode = MobControlledData.ControlMode.FOLLOW;
     private long lastHealTime = 0;
+    private long lastCombatTime = 0;
     private boolean isSystemAttack = false;
 
     /**
@@ -108,6 +110,24 @@ public class MobControlCapability {
     }
 
     /**
+     * 获取最近一次战斗发生的游戏时间刻（game tick），用于脱战恢复判断。
+     *
+     * @return 最近一次战斗时间；默认为 {@code 0L}
+     */
+    public long getLastCombatTime() {
+        return lastCombatTime;
+    }
+
+    /**
+     * 更新最近一次战斗发生的游戏时间刻。
+     *
+     * @param time 当前的 {@link net.minecraft.world.level.Level#getGameTime()} 值
+     */
+    public void setLastCombatTime(long time) {
+        this.lastCombatTime = time;
+    }
+
+    /**
      * 判断当前攻击是否为系统发起（而非玩家手动指令触发）。
      *
      * <p>系统攻击标记用于在生物死亡时判断是否触发重生逻辑：
@@ -137,6 +157,7 @@ public class MobControlCapability {
      *   <li>{@code "ControllerUUID"}（仅在非 {@code null} 时写入）</li>
      *   <li>{@code "ControlMode"}</li>
      *   <li>{@code "LastHealTime"}</li>
+     *   <li>{@code "LastCombatTime"}</li>
      *   <li>{@code "IsSystemAttack"}</li>
      * </ul>
      *
@@ -149,6 +170,7 @@ public class MobControlCapability {
         }
         nbt.putString("ControlMode", controlMode.name());
         nbt.putLong("LastHealTime", lastHealTime);
+        nbt.putLong("LastCombatTime", lastCombatTime);
         nbt.putBoolean("IsSystemAttack", isSystemAttack);
         return nbt;
     }
@@ -175,6 +197,7 @@ public class MobControlCapability {
         }
 
         lastHealTime = nbt.getLong("LastHealTime");
+        lastCombatTime = nbt.getLong("LastCombatTime");
         isSystemAttack = nbt.getBoolean("IsSystemAttack");
     }
 }

@@ -80,6 +80,9 @@ public class MobControlledData {
         capability.ifPresent(cap -> {
             cap.setControllerUUID(controllerUUID);
             cap.setControlMode(ControlMode.FOLLOW);
+            cap.setLastHealTime(0L);
+            cap.setLastCombatTime(0L);
+            cap.setSystemAttack(false);
         });
 
         // 不会自己消失//捡起物品
@@ -109,6 +112,8 @@ public class MobControlledData {
         capability.ifPresent(cap -> {
             cap.setControllerUUID(null);
             cap.setControlMode(ControlMode.FOLLOW);
+            cap.setLastHealTime(0L);
+            cap.setLastCombatTime(0L);
             cap.setSystemAttack(false);
         });
 
@@ -216,6 +221,37 @@ public class MobControlledData {
     public static void setControlMode(Mob mob, ControlMode mode) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setControlMode(mode));
+    }
+
+    /**
+     * 获取生物最近一次交战时间。
+     *
+     * @param mob 生物实体
+     * @return 最近交战的游戏时间刻；若能力缺失则返回 {@code 0L}
+     */
+    public static long getLastCombatTime(Mob mob) {
+        LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
+        return capability.map(MobControlCapability::getLastCombatTime).orElse(0L);
+    }
+
+    /**
+     * 记录生物最近一次交战时间。
+     *
+     * @param mob  生物实体
+     * @param time 当前游戏时间刻
+     */
+    public static void setLastCombatTime(Mob mob, long time) {
+        LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
+        capability.ifPresent(cap -> cap.setLastCombatTime(time));
+    }
+
+    /**
+     * 以当前世界时间记录一次交战。
+     *
+     * @param mob 生物实体
+     */
+    public static void markCombat(Mob mob) {
+        setLastCombatTime(mob, mob.level().getGameTime());
     }
 
     /**

@@ -64,6 +64,9 @@ import java.util.UUID;
  */
 @Mod.EventBusSubscriber
 public class MobControllerEvent {
+    private static final int HEAL_INTERVAL_TICKS = 2;
+    private static final int HEAL_OUT_OF_COMBAT_DELAY_TICKS = 100;
+
 
     /**
      * 为生物实体附加控制能力。
@@ -170,29 +173,16 @@ public class MobControllerEvent {
                 mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
                     long currentTime = mob.level().getGameTime();
                     long lastHealTime = cap.getLastHealTime();
-                    boolean hasValidTarget;
+                    boolean hasValidTarget = hasValidCombatTarget(mob);
 
-                    // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
-                    if (mob instanceof Hoglin/*  || mob instanceof Zoglin */) {
-                        Brain<?> brain = mob.getBrain();
-                        Optional<LivingEntity> attackTarget = brain.getMemory(MemoryModuleType.ATTACK_TARGET);
-                        hasValidTarget = attackTarget.isPresent() && attackTarget.get().isAlive() && !attackTarget.get().isDeadOrDying();
-                    }
-                    // 猪灵/猪灵蛮兵用ANGRY_AT和ATTACK_TARGET内存模块
-                    else if (mob instanceof AbstractPiglin) {
-                        Brain<?> brain = mob.getBrain();
-                        Optional<LivingEntity> attackTarget = brain.getMemory(MemoryModuleType.ATTACK_TARGET);
-                        hasValidTarget = brain.getMemory(MemoryModuleType.ANGRY_AT).isPresent()
-                                         && attackTarget.isPresent()
-                                         && attackTarget.get().isAlive()
-                                         && !attackTarget.get().isDeadOrDying();
-                    } else {
-                        LivingEntity target = mob.getTarget();
-                        hasValidTarget = target != null && target.isAlive() && !target.isDeadOrDying();
+                    if (hasValidTarget) {
+                        cap.setLastCombatTime(currentTime);
                     }
 
-                    // 每2tick恢复1生命值[没有有效攻击目标]
-                    if (currentTime - lastHealTime >= 2 && !hasValidTarget) {
+                    // 每2tick恢复1生命值[没有有效攻击目标且已脱战]
+                    if (currentTime - lastHealTime >= HEAL_INTERVAL_TICKS
+                        && !hasValidTarget
+                        && currentTime - cap.getLastCombatTime() >= HEAL_OUT_OF_COMBAT_DELAY_TICKS) {
                         if (mob.getHealth() < mob.getMaxHealth()) {
                             mob.heal(1.0F);
                             cap.setLastHealTime(currentTime);
@@ -211,7 +201,8 @@ public class MobControllerEvent {
         if (event.getEntity() instanceof Mob mob) {
 
             if (MobControlledData.isControlledEntity(mob)) {
-                if (event.getSource().getEntity() instanceof LivingEntity attacker) {
+                LivingEntity attacker = getResponsibleLivingEntity(event.getSource().getEntity());
+                if (attacker != null) {
                     UUID controllerUUID = MobControlledData.getControllerUUID(mob);
                     boolean isController = attacker instanceof Player && attacker.getUUID().equals(controllerUUID);
 
@@ -220,6 +211,8 @@ public class MobControllerEvent {
                         if (!MobControlUtil.isEnemy(mob, attacker)) {
                             return;
                         }
+
+                        MobControlledData.markCombat(mob);
 
                         MobControlledData.markSystemAttack(mob);
 
@@ -233,6 +226,7 @@ public class MobControllerEvent {
                             Brain<?> brain = mob.getBrain();
                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                             brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, attacker.getUUID(), 600L);
+                            brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, attacker, 200L);
                         } else {
                             MobControlUtil.setMobTargetWithAnger(mob, attacker);
                         }
@@ -259,12 +253,15 @@ public class MobControllerEvent {
 
                             if (controllerUUID != null && controllerUUID.equals(player.getUUID())) {
 
-                                if (event.getSource().getEntity() instanceof LivingEntity attacker) {
+                                LivingEntity attacker = getResponsibleLivingEntity(event.getSource().getEntity());
+                                if (attacker != null) {
 
                                     if (!mob.equals(attacker) && mob.getTarget() == null) {
                                         if (!MobControlUtil.isEnemy(mob, attacker)) {
                                             continue;
                                         }
+
+                                        MobControlledData.markCombat(mob);
 
                                         MobControlledData.markSystemAttack(mob);
 
@@ -278,6 +275,7 @@ public class MobControllerEvent {
                                             Brain<?> brain = mob.getBrain();
                                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                                             brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, attacker.getUUID(), 600L);
+                                            brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, attacker, 200L);
                                         } else {
                                             MobControlUtil.setMobTargetWithAnger(mob, attacker);
                                         }
@@ -316,6 +314,8 @@ public class MobControllerEvent {
                                             continue;
                                         }
 
+                                        MobControlledData.markCombat(mob);
+
                                         MobControlledData.markSystemAttack(mob);
 
                                         // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
@@ -328,6 +328,7 @@ public class MobControllerEvent {
                                             Brain<?> brain = mob.getBrain();
                                             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
                                             brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, target.getUUID(), 600L);
+                                            brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, 200L);
                                         } else {
                                             MobControlUtil.setMobTargetWithAnger(mob, target);
                                         }
@@ -338,6 +339,17 @@ public class MobControllerEvent {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * 受控生物造成伤害时刷新战斗时间，兼容箭矢/药水等投射物来源。
+     */
+    @SubscribeEvent
+    public static void onControlledMobDealDamage(LivingHurtEvent event) {
+        Mob sourceMob = getResponsibleMob(event.getSource().getEntity());
+        if (sourceMob != null && MobControlledData.isControlledEntity(sourceMob)) {
+            MobControlledData.markCombat(sourceMob);
         }
     }
 
@@ -445,7 +457,47 @@ public class MobControllerEvent {
                 if (!(mob instanceof EntityControlledWitch)) {
                     event.setCanceled(true);
                 }
+            } else if (MobControlledData.isControlledEntity(mob) && isValidCombatTarget(mob, event.getNewTarget())) {
+                MobControlledData.markCombat(mob);
             }
         }
+    }
+
+    private static boolean hasValidCombatTarget(Mob mob) {
+        if (mob instanceof Hoglin || mob instanceof Zoglin || mob instanceof AbstractPiglin) {
+            Brain<?> brain = mob.getBrain();
+            Optional<LivingEntity> attackTarget = brain.getMemory(MemoryModuleType.ATTACK_TARGET);
+            if (attackTarget.isPresent() && isValidCombatTarget(mob, attackTarget.get())) {
+                return true;
+            }
+        }
+
+        return isValidCombatTarget(mob, mob.getTarget());
+    }
+
+    private static boolean isValidCombatTarget(Mob mob, LivingEntity target) {
+        return target != null
+               && target.isAlive()
+               && !target.isDeadOrDying()
+               && target.level().equals(mob.level())
+               && target.distanceToSqr(mob) <= 64.0D * 64.0D;
+    }
+
+    private static LivingEntity getResponsibleLivingEntity(Entity sourceEntity) {
+        if (sourceEntity instanceof LivingEntity livingEntity) {
+            return livingEntity;
+        }
+        if (sourceEntity instanceof Projectile projectile && projectile.getOwner() instanceof LivingEntity livingEntity) {
+            return livingEntity;
+        }
+        return null;
+    }
+
+    private static Mob getResponsibleMob(Entity sourceEntity) {
+        LivingEntity livingEntity = getResponsibleLivingEntity(sourceEntity);
+        if (livingEntity instanceof Mob mob) {
+            return mob;
+        }
+        return null;
     }
 }
