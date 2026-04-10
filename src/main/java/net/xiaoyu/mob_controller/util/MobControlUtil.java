@@ -9,6 +9,7 @@ import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.entity.animal.Squid;
@@ -37,8 +38,6 @@ public class MobControlUtil {
             Player controller = MobControlledData.getController(mob, mob.level());
 
             if (controller != null && !controller.isSpectator()) {
-                mob.getLookControl().setLookAt(controller, 10.0F, (float) mob.getMaxHeadXRot());
-
                 double distanceSq = controller.distanceToSqr(mob);
 
                 // 跟随
@@ -120,10 +119,9 @@ public class MobControlUtil {
                         } catch (Exception e) {}
                     } */ else {
                         // 一般的生物...
-                        mob.lookAt(controller, 10.0F, 10.0F);
                         mob.getNavigation().moveTo(controller, 1.0D);
                         if (mob.getMoveControl() instanceof AccessorSlimeMoveControl slimeMoveControl) {
-                            slimeMoveControl.mob_controller$setDirection(mob.getYRot(), true);
+                            slimeMoveControl.mob_controller$setDirection(getYawTowards(mob, controller), true);
                         }
                     }
 
@@ -166,6 +164,12 @@ public class MobControlUtil {
                 }
             }
         }
+    }
+
+    private static float getYawTowards(Entity source, Entity target) {
+        double dx = target.getX() - source.getX();
+        double dz = target.getZ() - source.getZ();
+        return (float) (Mth.atan2(dz, dx) * (180.0F / (float) Math.PI)) - 90.0F;
     }
 
     private static void teleportMob(Mob mob, BlockPos pos) {
