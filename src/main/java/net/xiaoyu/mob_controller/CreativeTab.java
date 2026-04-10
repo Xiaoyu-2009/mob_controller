@@ -31,28 +31,30 @@ public class CreativeTab {
      * @see MobController#MOD_ID
      */
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MobController.MOD_ID);
+        DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MobController.MOD_ID);
 
     /**
      * 本模组在创造模式物品栏中的标签页注册对象。
      *
      * <p>懒加载，在 Forge 注册阶段通过 {@link #CREATIVE_MODE_TABS} 完成实例化。</p>
      */
-    public static final RegistryObject<CreativeModeTab> MOB_CONTROLLER_TAB = CREATIVE_MODE_TABS.register("mob_controller_tab",
-            () -> CreativeModeTab.builder()
-                    .title(Component.translatable("itemGroup.mob_controller"))
-                    .icon(() -> new ItemStack(ModItems.MOB_CONTROLLER_ITEM.get()))
-                    .displayItems((params, output) -> {
-                        // 生物控制器
-                        output.accept(ModItems.MOB_CONTROLLER_ITEM.get());
-                        // 控制令
-                        output.accept(ModItems.CONTROL_COMMAND_ITEM.get());
-                        // 心变契约
-                        output.accept(ModItems.HEART_CONTRACT_ITEM.get());
-                        // 盔甲编辑蓝图
-                        output.accept(ModItems.ARMOR_EDITING_BLUEPRINT.get());
-                    })
-                    .build());
+    public static final RegistryObject<CreativeModeTab> MOB_CONTROLLER_TAB = CREATIVE_MODE_TABS.register(
+        "mob_controller_tab",
+        () -> CreativeModeTab.builder()
+            .title(Component.translatable("itemGroup.mob_controller"))
+            .icon(() -> new ItemStack(ModItems.MOB_CONTROLLER_ITEM.get()))
+            .displayItems((params, output) -> {
+                // 生物控制器
+                output.accept(ModItems.MOB_CONTROLLER_ITEM.get());
+                // 控制令
+                output.accept(ModItems.CONTROL_COMMAND_ITEM.get());
+                // 心变契约
+                output.accept(ModItems.HEART_CONTRACT_ITEM.get());
+                // 盔甲编辑蓝图
+                output.accept(ModItems.ARMOR_EDITING_BLUEPRINT.get());
+            })
+            .build()
+    );
 
     /**
      * 将 {@link #CREATIVE_MODE_TABS} 延迟注册器绑定到给定的模组事件总线，

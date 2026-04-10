@@ -11,6 +11,7 @@ import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 
 import java.util.Objects;
 import java.util.function.Supplier;
+
 /**
  * 服务端下发到客户端的控制能力同步数据包。
  *
@@ -18,15 +19,19 @@ import java.util.function.Supplier;
  * 同步到客户端实体副本。</p>
  */
 public class MobControlCapabilitySyncPacket {
-    /** 需要同步的实体 ID。 */
+    /**
+     * 需要同步的实体 ID。
+     */
     private final int entityId;
-    /** 对应实体的能力 NBT 数据。 */
+    /**
+     * 对应实体的能力 NBT 数据。
+     */
     private final CompoundTag entityCap;
 
     /**
      * 构造同步数据包。
      *
-     * @param entityId 目标实体 ID
+     * @param entityId  目标实体 ID
      * @param entityCap 能力 NBT
      */
     public MobControlCapabilitySyncPacket(int entityId, CompoundTag entityCap) {

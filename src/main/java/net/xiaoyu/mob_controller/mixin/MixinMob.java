@@ -1,6 +1,10 @@
 package net.xiaoyu.mob_controller.mixin;
 
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Targeting;
 import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.Skeleton;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
@@ -14,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
 /**
  * 生物基础行为注入。
  *
@@ -56,7 +61,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
                 MobControlUtil.handleMobFollowing(mob);
                 MobControlUtil.clearStayFlightCoordinateWeld(mob);
             } else if (mode == MobControlledData.ControlMode.STAY && MobControlledData.isControlledEntity(mob)
-                    && MobControlUtil.shouldUseStayFlightWeld(mob)) {
+                       && MobControlUtil.shouldUseStayFlightWeld(mob)) {
                 // 特殊 AI 生物停留时坐标焊死
                 MobControlUtil.applyStayFlightCoordinateWeld(mob);
             } else {
@@ -123,7 +128,8 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
         Object thiz = this;
         if (thiz instanceof Mob mob) {
             Entity entity = this.getFirstPassenger();
-            if (entity != null && MobControlledData.isControlledEntity(mob) && MobControlledData.getControllerUUID(mob).equals(entity.getUUID())) {
+            if (entity != null && MobControlledData.isControlledEntity(mob) && MobControlledData.getControllerUUID(mob)
+                .equals(entity.getUUID())) {
                 if (entity instanceof LivingEntity living) {
                     cir.setReturnValue(living);
                 }

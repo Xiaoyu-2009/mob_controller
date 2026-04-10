@@ -8,7 +8,11 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -27,18 +31,36 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
 /**
  * 生物控制器物品。
  *
  * <p>用于尝试控制目标生物，并提供“控制令”批量切换模式的服务端逻辑支持。</p>
  */
 public class MobControllerItem extends Item {
-    /** 特殊生物类型替换函数表（如灾厄村民变体）。 */
+    /**
+     * 特殊生物类型替换函数表（如灾厄村民变体）。
+     */
     public static final Map<EntityType<?>, Function<Entity, Mob>> ENTITY_TYPE_FUNCTION_MAP = new HashMap<>();
-    /** 控制令生效半径（以方块为单位）。 */
+    /**
+     * 控制令生效半径（以方块为单位）。
+     */
     private static final int CONTROL_COMMAND_RANGE = 32;
-    /** 控制令生效后给予发光效果的持续时长。 */
+    /**
+     * 控制令生效后给予发光效果的持续时长。
+     */
     private static final int GLOWING_DURATION_TICKS = 100;
+
+    static {
+        ENTITY_TYPE_FUNCTION_MAP.put(
+            EntityType.PILLAGER, oldEntity ->
+                newMob(oldEntity, ModEntities.CONTROLLED_PILLAGER.get(), EntityControlledPillager::new)
+        );
+        ENTITY_TYPE_FUNCTION_MAP.put(
+            EntityType.WITCH, oldEntity ->
+                newMob(oldEntity, ModEntities.CONTROLLED_WITCH.get(), EntityControlledWitch::new)
+        );
+    }
 
     /**
      * 构造生物控制器物品。
@@ -47,6 +69,71 @@ public class MobControllerItem extends Item {
      */
     public MobControllerItem(Properties properties) {
         super(properties);
+    }
+
+    /**
+     * 对玩家周围所有受其控制的生物批量应用控制模式。
+     *
+     * @param player 执行者玩家
+     * @param mode   目标控制模式
+     * @return 受影响生物数量
+     */
+    public static int applyControlCommand(Player player, MobControlledData.ControlMode mode) {
+        if (player.level().isClientSide) {
+            return 0;
+        }
+
+        AABB area = player.getBoundingBox().inflate(CONTROL_COMMAND_RANGE);
+        List<Mob> controlledMobs = player.level().getEntitiesOfClass(
+            Mob.class, area, mob ->
+                MobControlledData.isControlledEntity(mob) && player.getUUID().equals(MobControlledData.getControllerUUID(mob))
+        );
+
+        for (Mob mob : controlledMobs) {
+            MobControlledData.setControlMode(mob, mode);
+            mob.setTarget(null);
+            MobControlledData.clearSystemAttack(mob);
+            mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, GLOWING_DURATION_TICKS));
+        }
+
+        return controlledMobs.size();
+    }
+
+    /**
+     * 使用旧实体 NBT 创建新实体实例，并尽量保持位置和朝向。
+     *
+     * @param oldEntity      原实体
+     * @param entityType     新实体类型
+     * @param newMobFunction 新实体构造函数
+     * @param <T>            实体泛型
+     * @return 新创建的生物实体
+     */
+    private static <T extends Entity> Mob newMob(
+        Entity oldEntity,
+        EntityType<T> entityType,
+        BiFunction<EntityType<T>, ServerLevel, Mob> newMobFunction
+    ) {
+        CompoundTag nbt = oldEntity.saveWithoutId(new CompoundTag());
+
+        double x = oldEntity.getX();
+        double y = oldEntity.getY();
+        double z = oldEntity.getZ();
+        float yRot = oldEntity.getYRot();
+        float xRot = oldEntity.getXRot();
+
+        ServerLevel serverLevel = (ServerLevel) oldEntity.level();
+
+        oldEntity.remove(Entity.RemovalReason.DISCARDED);
+
+        Mob newMob = newMobFunction.apply(entityType, serverLevel);
+
+        newMob.load(nbt);
+
+        newMob.setPos(x, y, z);
+        newMob.setYRot(yRot);
+        newMob.setXRot(xRot);
+
+        return newMob;
     }
 
     /**
@@ -72,7 +159,7 @@ public class MobControllerItem extends Item {
                         String modeKey = (newMode == MobControlledData.ControlMode.FOLLOW) ? "mob_controller.mode.follow" : "mob_controller.mode.stay";
 
                         MobControlUtil.showMessageToPlayer(player, mobName, modeKey, new Object[]{}, ChatFormatting.GOLD);
-                        
+
                         return InteractionResult.SUCCESS;
                     }
                 }*/
@@ -88,7 +175,7 @@ public class MobControllerItem extends Item {
 
                 if (MobControlledData.hasPlayerControlledSameHighHealthMob(player.getUUID(), mob)) {
                     /*MobControlUtil.showMessageToPlayer(
-                        player, null, "mob_controller.error.same_high_health_mob", 
+                        player, null, "mob_controller.error.same_high_health_mob",
                         new Object[]{ MobControlledData.HIGH_HEALTH_THRESHOLD }, ChatFormatting.RED
                     );*/
 
@@ -208,32 +295,6 @@ public class MobControllerItem extends Item {
     }
 
     /**
-     * 对玩家周围所有受其控制的生物批量应用控制模式。
-     *
-     * @param player 执行者玩家
-     * @param mode   目标控制模式
-     * @return 受影响生物数量
-     */
-    public static int applyControlCommand(Player player, MobControlledData.ControlMode mode) {
-        if (player.level().isClientSide) {
-            return 0;
-        }
-
-        AABB area = player.getBoundingBox().inflate(CONTROL_COMMAND_RANGE);
-        List<Mob> controlledMobs = player.level().getEntitiesOfClass(Mob.class, area, mob ->
-                MobControlledData.isControlledEntity(mob) && player.getUUID().equals(MobControlledData.getControllerUUID(mob)));
-
-        for (Mob mob : controlledMobs) {
-            MobControlledData.setControlMode(mob, mode);
-            mob.setTarget(null);
-            MobControlledData.clearSystemAttack(mob);
-            mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, GLOWING_DURATION_TICKS));
-        }
-
-        return controlledMobs.size();
-    }
-
-    /**
      * 在服务端生成控制成功/失败粒子效果。
      *
      * @param mob     目标生物
@@ -249,66 +310,26 @@ public class MobControllerItem extends Item {
         // 控制成功
         if (success) {
             ((ServerLevel) level).sendParticles(
-                    ParticleTypes.HEART,
-                    mob.getX(),
-                    mob.getY() + mob.getBbHeight(),
-                    mob.getZ(),
-                    7,
-                    0.5, 0.5, 0.5,
-                    0.1
+                ParticleTypes.HEART,
+                mob.getX(),
+                mob.getY() + mob.getBbHeight(),
+                mob.getZ(),
+                7,
+                0.5, 0.5, 0.5,
+                0.1
             );
         }
         // 控制失败
         else {
             ((ServerLevel) level).sendParticles(
-                    ParticleTypes.ANGRY_VILLAGER,
-                    mob.getX(),
-                    mob.getY() + mob.getBbHeight(),
-                    mob.getZ(),
-                    7,
-                    0.5, 0.5, 0.5,
-                    0.1
+                ParticleTypes.ANGRY_VILLAGER,
+                mob.getX(),
+                mob.getY() + mob.getBbHeight(),
+                mob.getZ(),
+                7,
+                0.5, 0.5, 0.5,
+                0.1
             );
         }
-    }
-
-    /**
-     * 使用旧实体 NBT 创建新实体实例，并尽量保持位置和朝向。
-     *
-     * @param oldEntity      原实体
-     * @param entityType     新实体类型
-     * @param newMobFunction 新实体构造函数
-     * @param <T>            实体泛型
-     * @return 新创建的生物实体
-     */
-    private static <T extends Entity> Mob newMob(Entity oldEntity, EntityType<T> entityType, BiFunction<EntityType<T>, ServerLevel, Mob> newMobFunction) {
-        CompoundTag nbt = oldEntity.saveWithoutId(new CompoundTag());
-
-        double x = oldEntity.getX();
-        double y = oldEntity.getY();
-        double z = oldEntity.getZ();
-        float yRot = oldEntity.getYRot();
-        float xRot = oldEntity.getXRot();
-
-        ServerLevel serverLevel = (ServerLevel) oldEntity.level();
-
-        oldEntity.remove(Entity.RemovalReason.DISCARDED);
-
-        Mob newMob = newMobFunction.apply(entityType, serverLevel);
-
-        newMob.load(nbt);
-
-        newMob.setPos(x, y, z);
-        newMob.setYRot(yRot);
-        newMob.setXRot(xRot);
-
-        return newMob;
-    }
-
-    static {
-        ENTITY_TYPE_FUNCTION_MAP.put(EntityType.PILLAGER, oldEntity ->
-                newMob(oldEntity, ModEntities.CONTROLLED_PILLAGER.get(), EntityControlledPillager::new));
-        ENTITY_TYPE_FUNCTION_MAP.put(EntityType.WITCH, oldEntity ->
-                newMob(oldEntity, ModEntities.CONTROLLED_WITCH.get(), EntityControlledWitch::new));
     }
 }

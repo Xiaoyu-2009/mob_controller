@@ -5,7 +5,11 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.goal.*;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableWitchTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestHealableRaiderTargetGoal;
 import net.minecraft.world.entity.monster.PatrollingMonster;
@@ -26,8 +30,9 @@ import net.xiaoyu.mob_controller.entity.ai.goal.GoalNearestHealableTarget;
 import net.xiaoyu.mob_controller.mixin.AccessorWitch;
 import net.xiaoyu.mob_controller.registry.ModEffects;
 
-import javax.annotation.Nullable;
 import java.util.UUID;
+import javax.annotation.Nullable;
+
 /**
  * 受控女巫实体。
  *
@@ -35,7 +40,9 @@ import java.util.UUID;
  */
 
 public class EntityControlledWitch extends Witch implements IControllableEntity {
-    /** 可治疗目标选择 AI。 */
+    /**
+     * 可治疗目标选择 AI。
+     */
     @Nullable
     protected GoalNearestHealableTarget<LivingEntity> goalNearestHealableTarget;
 
@@ -47,7 +54,9 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         this.setCanJoinRaid(false);
     }
 
-    /** 注册行为与目标 AI。 */
+    /**
+     * 注册行为与目标 AI。
+     */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
@@ -57,23 +66,31 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
         this.goalSelector.addGoal(4, new PatrollingMonster.LongDistancePatrolGoal<>(this, 0.7D, 0.595D));
 
-        this.goalNearestHealableTarget = new GoalNearestHealableTarget<>(this, LivingEntity.class, true,
-                livingEntity -> this.isSameTeam(livingEntity) && livingEntity.getHealth() < livingEntity.getMaxHealth());
-        NearestAttackableWitchTargetGoal<LivingEntity> playerNearestAttackableWitchTargetGoal = new NearestAttackableWitchTargetGoal<>(this, LivingEntity.class, 10, true, false,
-                entity -> false);
+        this.goalNearestHealableTarget = new GoalNearestHealableTarget<>(
+            this, LivingEntity.class, true,
+            livingEntity -> this.isSameTeam(livingEntity) && livingEntity.getHealth() < livingEntity.getMaxHealth()
+        );
+        NearestAttackableWitchTargetGoal<LivingEntity> playerNearestAttackableWitchTargetGoal = new NearestAttackableWitchTargetGoal<>(
+            this, LivingEntity.class, 10, true, false,
+            entity -> false
+        );
 
 //        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, this.goalNearestHealableTarget);
         this.targetSelector.addGoal(3, playerNearestAttackableWitchTargetGoal);
 
         if (this instanceof AccessorWitch accessorWitch) {
-            accessorWitch.mob_controller$setHealRaidersGoal(new NearestHealableRaiderTargetGoal<>(this, Raider.class,
-                    true, living -> false));
+            accessorWitch.mob_controller$setHealRaidersGoal(new NearestHealableRaiderTargetGoal<>(
+                this, Raider.class,
+                true, living -> false
+            ));
             accessorWitch.mob_controller$setAttackPlayersGoal(playerNearestAttackableWitchTargetGoal);
         }
     }
 
-    /** 每刻更新并递减治疗目标冷却。 */
+    /**
+     * 每刻更新并递减治疗目标冷却。
+     */
     @Override
     public void aiStep() {
         super.aiStep();
@@ -103,7 +120,8 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
                 } else {
                     potion = Potions.REGENERATION;
                 }
-                boolean isOnFire = target.isOnFire() || target.getLastDamageSource() != null && target.getLastDamageSource().is(DamageTypeTags.IS_FIRE);
+                boolean isOnFire = target.isOnFire() || target.getLastDamageSource() != null && target.getLastDamageSource()
+                    .is(DamageTypeTags.IS_FIRE);
                 if (isOnFire && !target.hasEffect(MobEffects.FIRE_RESISTANCE)) {
                     potion = Potions.LONG_FIRE_RESISTANCE;
                 }
@@ -121,34 +139,47 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
             thrownpotion.setXRot(thrownpotion.getXRot() + 20.0F);
             thrownpotion.shoot(d0, d1 + d3 * 0.2D, d2, 0.75F, 8.0F);
             if (!this.isSilent()) {
-                this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITCH_THROW, this.getSoundSource(), 1.0F, 0.8F + this.random.nextFloat() * 0.4F);
+                this.level()
+                    .playSound(
+                        null,
+                        this.getX(),
+                        this.getY(),
+                        this.getZ(),
+                        SoundEvents.WITCH_THROW,
+                        this.getSoundSource(),
+                        1.0F,
+                        0.8F + this.random.nextFloat() * 0.4F
+                    );
             }
 
             this.level().addFreshEntity(thrownpotion);
         }
     }
 
-    /** 在和平模式下不自动消失。 */
+    /**
+     * 在和平模式下不自动消失。
+     */
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;
     }
 
-    /** 女巫可将同阵营单位视作可见目标（用于治疗）。 */
-    @Override
-    public boolean canSeeAsTarget(LivingEntity living) {
-        return IControllableEntity.super.canSeeAsTarget(living) || IControllableEntity.super.isSameTeam(living);
-    }
-
-    /** 获取主人 UUID。 */
+    /**
+     * 获取主人 UUID。
+     */
     @Nullable
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public UUID getOwnerUUID() {
-        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::getControllerUUID).orElse(null);
+        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+            .resolve()
+            .map(MobControlCapability::getControllerUUID)
+            .orElse(null);
     }
 
-    /** 设置主人 UUID。 */
+    /**
+     * 设置主人 UUID。
+     */
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public void setOwnerUUID(@Nullable UUID uuid) {
@@ -159,9 +190,22 @@ public class EntityControlledWitch extends Witch implements IControllableEntity 
         });
     }
 
-    /** 判断是否受控。 */
+    /**
+     * 判断是否受控。
+     */
     @Override
     public boolean isControlled() {
-        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::isControlled).orElse(false);
+        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+            .resolve()
+            .map(MobControlCapability::isControlled)
+            .orElse(false);
+    }
+
+    /**
+     * 女巫可将同阵营单位视作可见目标（用于治疗）。
+     */
+    @Override
+    public boolean canSeeAsTarget(LivingEntity living) {
+        return IControllableEntity.super.canSeeAsTarget(living) || IControllableEntity.super.isSameTeam(living);
     }
 }

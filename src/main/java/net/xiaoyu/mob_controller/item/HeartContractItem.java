@@ -10,6 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import java.util.UUID;
+
 /**
  * 心变契约物品。
  *

@@ -14,6 +14,7 @@ import net.xiaoyu.mob_controller.registry.ModEffects;
 import net.xiaoyu.mob_controller.registry.ModEntities;
 import net.xiaoyu.mob_controller.registry.ModItems;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
+
 /**
  * Mob Controller 模组的主入口类，负责在 Forge 模组加载阶段完成所有子系统的注册与初始化。
  *
@@ -34,18 +35,10 @@ import net.xiaoyu.mob_controller.registry.ModMenuType;
  */
 @Mod(MobController.MOD_ID)
 public class MobController {
-    /** 模组 ID，与 {@code mods.toml} 以及资源路径保持一致。 */
-    public static final String MOD_ID = "mob_controller";
-
     /**
-     * 生成带有本模组命名空间的 {@link ResourceLocation}。
-     *
-     * @param s 资源路径（不含命名空间前缀）
-     * @return 形如 {@code mob_controller:<s>} 的资源定位符
+     * 模组 ID，与 {@code mods.toml} 以及资源路径保持一致。
      */
-    public static ResourceLocation prefix(String s) {
-        return new ResourceLocation(MOD_ID, s);
-    }
+    public static final String MOD_ID = "mob_controller";
 
     /**
      * 模组构造器，由 Forge 在模组初始化阶段调用。
@@ -71,5 +64,15 @@ public class MobController {
         MinecraftForge.EVENT_BUS.register(MobControllerEvent.class);
         eventBus.register(MobControlCapabilityRegister.class);
         NetWorkManager.register();
+    }
+
+    /**
+     * 生成带有本模组命名空间的 {@link ResourceLocation}。
+     *
+     * @param path 资源路径（不含命名空间前缀）
+     * @return 形如 {@code mob_controller:<s>} 的资源定位符
+     */
+    public static ResourceLocation location(String path) {
+        return new ResourceLocation(MOD_ID, path);
     }
 }

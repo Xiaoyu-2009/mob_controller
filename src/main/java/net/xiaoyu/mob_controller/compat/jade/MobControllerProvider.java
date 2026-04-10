@@ -14,6 +14,7 @@ import snownee.jade.api.IEntityComponentProvider;
 import snownee.jade.api.IServerDataProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
+
 /**
  * Jade/WTHIT 实体信息提供器。
  *
@@ -21,10 +22,14 @@ import snownee.jade.api.config.IPluginConfig;
  */
 public class MobControllerProvider implements IEntityComponentProvider, IServerDataProvider<EntityAccessor> {
 
-    /** 提供器单例。 */
+    /**
+     * 提供器单例。
+     */
     public static final MobControllerProvider INSTANCE = new MobControllerProvider();
 
-    /** 私有构造，使用单例。 */
+    /**
+     * 私有构造，使用单例。
+     */
     private MobControllerProvider() {
     }
 

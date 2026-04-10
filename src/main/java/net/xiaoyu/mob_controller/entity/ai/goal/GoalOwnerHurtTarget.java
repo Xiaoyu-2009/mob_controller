@@ -8,8 +8,8 @@ import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.xiaoyu.mob_controller.entity.IControllableEntity;
 
-import javax.annotation.Nullable;
 import java.util.EnumSet;
+import javax.annotation.Nullable;
 
 /**
  * 受控实体“主人攻击目标”AI。
@@ -50,7 +50,7 @@ public class GoalOwnerHurtTarget<T extends Mob & IControllableEntity> extends Ta
                 int i = livingentity.getLastHurtMobTimestamp();
                 if (this.ownerLastHurt != null) {
                     return i != this.timestamp && this.canAttack(this.ownerLastHurt, TargetingConditions.DEFAULT)
-                            && this.controllableEntity.wantsToAttack(this.ownerLastHurt);
+                           && this.controllableEntity.wantsToAttack(this.ownerLastHurt);
                 }
             }
         }

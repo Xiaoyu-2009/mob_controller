@@ -15,13 +15,16 @@ import net.xiaoyu.mob_controller.MobController;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
 
 import javax.annotation.Nullable;
+
 /**
  * 受控生物装备编辑菜单容器。
  *
  * <p>负责将目标生物的装备槽位映射到菜单，并与玩家背包联动。</p>
  */
 public class ContainerArmor extends AbstractContainerMenu {
-    /** 受控生物装备容器实例。 */
+    /**
+     * 受控生物装备容器实例。
+     */
     @Nullable
     private InventoryArmor inv;
 
@@ -79,16 +82,16 @@ public class ContainerArmor extends AbstractContainerMenu {
         this.addSlot(new Slot(this.inv, 3, 44, 35) {
 
             @Override
-            public int getMaxStackSize() {
-                return 1;
-            }
-
-            @Override
             public boolean mayPlace(ItemStack stack) {
                 if (ContainerArmor.this.inv != null) {
                     return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
                 }
                 return false;
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
             }
 
             @Override
@@ -99,16 +102,16 @@ public class ContainerArmor extends AbstractContainerMenu {
         this.addSlot(new Slot(this.inv, 4, 116, 17) {
 
             @Override
-            public int getMaxStackSize() {
-                return 1;
-            }
-
-            @Override
             public boolean mayPlace(ItemStack stack) {
                 if (ContainerArmor.this.inv != null) {
                     return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
                 }
                 return false;
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
             }
 
             @Override
@@ -119,16 +122,16 @@ public class ContainerArmor extends AbstractContainerMenu {
         this.addSlot(new Slot(this.inv, 5, 116, 35) {
 
             @Override
-            public int getMaxStackSize() {
-                return 1;
-            }
-
-            @Override
             public boolean mayPlace(ItemStack stack) {
                 if (ContainerArmor.this.inv != null) {
                     return ContainerArmor.this.inv.canPlaceItem(this.index, stack);
                 }
                 return false;
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
             }
 
             @Override
@@ -145,14 +148,6 @@ public class ContainerArmor extends AbstractContainerMenu {
         for (int rowHotBar = 0; rowHotBar < 9; ++rowHotBar) {
             this.addSlot(new Slot(playerInv, rowHotBar, 8 + rowHotBar * 18, 124));
         }
-    }
-
-    /**
-     * 判断菜单是否仍可交互。
-     */
-    @Override
-    public boolean stillValid(Player player) {
-        return true;
     }
 
     /**
@@ -180,5 +175,13 @@ public class ContainerArmor extends AbstractContainerMenu {
         }
 
         return itemstack;
+    }
+
+    /**
+     * 判断菜单是否仍可交互。
+     */
+    @Override
+    public boolean stillValid(Player player) {
+        return true;
     }
 }

@@ -1,11 +1,12 @@
 package net.xiaoyu.mob_controller.mixin;
 
-import net.xiaoyu.mob_controller.util.MobControlledData;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
+import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 /**
  * 凋零行为注入。
  *

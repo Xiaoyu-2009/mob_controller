@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
+
 /**
  * 史莱姆行为注入。
  *
@@ -24,7 +25,10 @@ public abstract class SlimeMixin {
     /**
      * 注入 {@code remove} 分裂流程：将新分裂史莱姆继承为同控制者受控状态。
      */
-    @Inject(method = "remove(Lnet/minecraft/world/entity/Entity$RemovalReason;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/Slime;moveTo(DDDFF)V"))
+    @Inject(
+        method = "remove(Lnet/minecraft/world/entity/Entity$RemovalReason;)V",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/Slime;moveTo(DDDFF)V")
+    )
     private void injectRemove(Entity.RemovalReason reason, CallbackInfo ci, @Local Slime slime) {
         Mob mob = (Mob) (Object) this;
         if (MobControlledData.isControlledEntity(mob)) {

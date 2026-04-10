@@ -17,8 +17,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.xiaoyu.mob_controller.client.GuiHandler;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
-import javax.annotation.Nullable;
 import java.util.List;
+import javax.annotation.Nullable;
+
 /**
  * 盔甲编辑蓝图物品。
  *
@@ -43,14 +44,6 @@ public class MobArmor extends Item {
     }
 
     /**
-     * 添加物品提示文本。
-     */
-    @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> list, TooltipFlag flagIn) {
-        list.add(Component.translatable("mob_controller.tooltip.armor").withStyle(ChatFormatting.AQUA));
-    }
-
-    /**
      * 对受控生物使用时打开装备编辑菜单。
      */
     @Override
@@ -61,5 +54,13 @@ public class MobArmor extends Item {
         }
 
         return InteractionResult.PASS;
+    }
+
+    /**
+     * 添加物品提示文本。
+     */
+    @Override
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> list, TooltipFlag flagIn) {
+        list.add(Component.translatable("mob_controller.tooltip.armor").withStyle(ChatFormatting.AQUA));
     }
 }

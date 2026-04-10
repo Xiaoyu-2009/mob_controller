@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Objects;
 import java.util.Optional;
+
 /**
  * 监守者行为注入。
  *
@@ -25,10 +26,14 @@ import java.util.Optional;
  */
 @Mixin(Warden.class)
 public class WardenMixin {
-    /** 黑暗效果持续时间。 */
+    /**
+     * 黑暗效果持续时间。
+     */
     @Unique
     private static final int CONTROLLED_WARDEN_DARKNESS_DURATION = 260;
-    /** 黑暗效果刷新阈值。 */
+    /**
+     * 黑暗效果刷新阈值。
+     */
     @Unique
     private static final int CONTROLLED_WARDEN_DARKNESS_REFRESH_MARGIN = 40;
 
@@ -70,7 +75,7 @@ public class WardenMixin {
         if (angryTarget.isPresent() && angryTarget.get() instanceof Player player && MobControlUtil.isEnemy(warden, player)) {
             MobEffectInstance darkness = new MobEffectInstance(MobEffects.DARKNESS, CONTROLLED_WARDEN_DARKNESS_DURATION, 0, false, false);
             if (!player.hasEffect(MobEffects.DARKNESS)
-                    || Objects.requireNonNull(player.getEffect(MobEffects.DARKNESS)).endsWithin(CONTROLLED_WARDEN_DARKNESS_REFRESH_MARGIN)) {
+                || Objects.requireNonNull(player.getEffect(MobEffects.DARKNESS)).endsWithin(CONTROLLED_WARDEN_DARKNESS_REFRESH_MARGIN)) {
                 player.addEffect(darkness, warden);
             }
         }

@@ -3,15 +3,20 @@ package net.xiaoyu.mob_controller.util;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.locale.Language;
-import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobType;
+import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.entity.animal.Squid;
 import net.minecraft.world.entity.monster.Blaze;
@@ -28,10 +33,11 @@ import net.minecraft.world.phys.Vec3;
 import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.mixin.AccessorSlimeMoveControl;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.Objects;
 import java.util.UUID;
+import javax.annotation.Nullable;
+
 /**
  * 生物控制系统的通用工具类。
  *
@@ -40,7 +46,9 @@ import java.util.UUID;
  */
 
 public class MobControlUtil {
-    /** 停留模式坐标焊死数据的持久化键。 */
+    /**
+     * 停留模式坐标焊死数据的持久化键。
+     */
     private static final String STAY_WELD_TAG = "mob_controller:stay_weld";
     private static final String STAY_WELD_X = "x";
     private static final String STAY_WELD_Y = "y";
@@ -100,15 +108,15 @@ public class MobControlUtil {
                     } else if (mob instanceof Squid squid) {
                         // 鱿鱼
                         Vec3 direction = new Vec3(
-                                controller.getX() - mob.getX(),
-                                controller.getY() - mob.getY(),
-                                controller.getZ() - mob.getZ()
+                            controller.getX() - mob.getX(),
+                            controller.getY() - mob.getY(),
+                            controller.getZ() - mob.getZ()
                         ).normalize();
 
                         squid.setMovementVector(
-                                (float) (direction.x * 0.2F),
-                                (float) (direction.y * 0.2F),
-                                (float) (direction.z * 0.2F)
+                            (float) (direction.x * 0.2F),
+                            (float) (direction.y * 0.2F),
+                            (float) (direction.z * 0.2F)
                         );
                     } else if (mob instanceof Bat bat) {
                         // 蝙蝠
@@ -121,11 +129,13 @@ public class MobControlUtil {
                             Field targetPositionField = Bat.class.getDeclaredField("targetPosition");
                             targetPositionField.setAccessible(true);
 
-                            targetPositionField.set(bat, new BlockPos(
+                            targetPositionField.set(
+                                bat, new BlockPos(
                                     (int) controller.getX(),
                                     (int) controller.getY() + 2,
                                     (int) controller.getZ()
-                            ));
+                                )
+                            );
                         } catch (Exception ignored) {
                         }
                     }/*  else if (mob instanceof Bee) {
@@ -251,8 +261,8 @@ public class MobControlUtil {
     private static boolean isControllerFullySubmerged(Player controller) {
         // 控制者头部/身体是否完全在水中
         return controller.isInWater() &&
-                controller.level().getFluidState(controller.blockPosition()).getType().equals(Fluids.WATER) &&
-                controller.level().getFluidState(controller.blockPosition().above()).getType().equals(Fluids.WATER);
+               controller.level().getFluidState(controller.blockPosition()).getType().equals(Fluids.WATER) &&
+               controller.level().getFluidState(controller.blockPosition().above()).getType().equals(Fluids.WATER);
     }
 
     @Nullable
@@ -273,9 +283,9 @@ public class MobControlUtil {
                             BlockPos upperPos = checkPos.above();
                             if (mob.level().getFluidState(upperPos).getType().equals(Fluids.WATER)) {
                                 AABB targetAABB = mobAABB.move(
-                                        checkPos.getX() - mobAABB.minX,
-                                        checkPos.getY() - mobAABB.minY,
-                                        checkPos.getZ() - mobAABB.minZ
+                                    checkPos.getX() - mobAABB.minX,
+                                    checkPos.getY() - mobAABB.minY,
+                                    checkPos.getZ() - mobAABB.minZ
                                 );
 
                                 if (mob.level().noCollision(mob, targetAABB)) {
@@ -292,9 +302,9 @@ public class MobControlUtil {
 
                             if (groundState.isFaceSturdy(mob.level(), groundPos, Direction.UP)) {
                                 AABB targetAABB = mobAABB.move(
-                                        checkPos.getX() - mobAABB.minX,
-                                        checkPos.getY() - mobAABB.minY,
-                                        checkPos.getZ() - mobAABB.minZ
+                                    checkPos.getX() - mobAABB.minX,
+                                    checkPos.getY() - mobAABB.minY,
+                                    checkPos.getZ() - mobAABB.minZ
                                 );
 
                                 if (mob.level().noCollision(mob, targetAABB)) {
@@ -325,7 +335,7 @@ public class MobControlUtil {
             return false;
         }
         if (target instanceof LivingEntity mob && MobControlledData.isControlledEntity(mob)
-                && Objects.equals(MobControlledData.getControllerUUID(controlledMob), MobControlledData.getControllerUUID(mob))) {
+            && Objects.equals(MobControlledData.getControllerUUID(controlledMob), MobControlledData.getControllerUUID(mob))) {
             return false;
         }
 
@@ -412,9 +422,9 @@ public class MobControlUtil {
     public static void showControlModeTitle(Player player, Component mobName, String modeTranslationKey, ChatFormatting color) {
         if (player instanceof ServerPlayer serverPlayer) {
             Component title = Component.translatable(
-                    "mob_controller.title.control_mode",
-                    mobName,
-                    Component.translatable(modeTranslationKey)
+                "mob_controller.title.control_mode",
+                mobName,
+                Component.translatable(modeTranslationKey)
             ).setStyle(Style.EMPTY.withColor(color));
 
             serverPlayer.connection.send(new ClientboundSetTitlesAnimationPacket(5, 30, 10));

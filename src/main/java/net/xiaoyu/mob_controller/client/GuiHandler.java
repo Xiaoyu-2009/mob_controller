@@ -10,6 +10,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraftforge.network.NetworkHooks;
 import net.xiaoyu.mob_controller.inv.ContainerArmor;
 import org.jetbrains.annotations.NotNull;
+
 /**
  * 生物装备界面打开辅助类。
  */
@@ -22,17 +23,17 @@ public class GuiHandler {
      */
     public static void openGuiArmor(ServerPlayer player, Mob living) {
         NetworkHooks.openScreen(
-                player, new MenuProvider() {
-                    @Override
-                    public @NotNull Component getDisplayName() {
-                        return living.getName();
-                    }
+            player, new MenuProvider() {
+                @Override
+                public @NotNull Component getDisplayName() {
+                    return living.getName();
+                }
 
-                    @Override
-                    public AbstractContainerMenu createMenu(int i, @NotNull Inventory arg, @NotNull Player arg2) {
-                        return new ContainerArmor(i, arg, living);
-                    }
-                }, buf -> buf.writeInt(living.getId())
+                @Override
+                public AbstractContainerMenu createMenu(int i, @NotNull Inventory arg, @NotNull Player arg2) {
+                    return new ContainerArmor(i, arg, living);
+                }
+            }, buf -> buf.writeInt(living.getId())
         );
     }
 }

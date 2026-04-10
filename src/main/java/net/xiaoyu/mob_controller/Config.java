@@ -14,7 +14,9 @@ import java.util.List;
  * <p>所有字段均为 {@code public static final}，可在任意线程安全地读取。</p>
  */
 public class Config {
-    /** Forge 配置规格构建器，用于声明所有配置项。 */
+    /**
+     * Forge 配置规格构建器，用于声明所有配置项。
+     */
     public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
     /**
@@ -55,35 +57,39 @@ public class Config {
         BUILDER.push("Mob Controller Config");
 
         BLACKLISTED_MOBS = BUILDER
-                .comment("List of mob that cannot be controlled")
-                .defineList("blacklisted_mobs", Arrays.asList(
-                        "minecraft:parrot",
-                        "minecraft:wolf",
-                        "minecraft:cat",
-                        "minecraft:ocelot",
-                        "minecraft:horse",
-                        "minecraft:donkey",
-                        "minecraft:mule",
-                        "minecraft:llama",
-                        "minecraft:trader_llama",
-                        "minecraft:skeleton_horse",
-                        "minecraft:zombie_horse",
-                        "minecraft:camel"
-                ), obj -> obj instanceof String);
+            .comment("List of mob that cannot be controlled")
+            .defineList(
+                "blacklisted_mobs", Arrays.asList(
+                    "minecraft:parrot",
+                    "minecraft:wolf",
+                    "minecraft:cat",
+                    "minecraft:ocelot",
+                    "minecraft:horse",
+                    "minecraft:donkey",
+                    "minecraft:mule",
+                    "minecraft:llama",
+                    "minecraft:trader_llama",
+                    "minecraft:skeleton_horse",
+                    "minecraft:zombie_horse",
+                    "minecraft:camel"
+                ), obj -> obj instanceof String
+            );
 
         STAY_WELDED_SPECIAL_AI_MOBS = BUILDER
-                .comment("Special AI mobs that should be coordinate-welded in STAY mode")
-                .defineList("stay_welded_special_ai_mobs", Arrays.asList(
-                        "minecraft:ghast",
-                        "minecraft:vex",
-                        "minecraft:blaze",
-                        "minecraft:phantom",
-                        "minecraft:bat"
-                ), obj -> obj instanceof String);
+            .comment("Special AI mobs that should be coordinate-welded in STAY mode")
+            .defineList(
+                "stay_welded_special_ai_mobs", Arrays.asList(
+                    "minecraft:ghast",
+                    "minecraft:vex",
+                    "minecraft:blaze",
+                    "minecraft:phantom",
+                    "minecraft:bat"
+                ), obj -> obj instanceof String
+            );
 
         ALWAYS_SUCCESS = BUILDER
-                .comment("Whether to always succeed in controlling mobs")
-                .define("always_success", false);
+            .comment("Whether to always succeed in controlling mobs")
+            .define("always_success", false);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

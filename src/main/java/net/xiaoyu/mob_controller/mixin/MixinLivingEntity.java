@@ -2,7 +2,11 @@ package net.xiaoyu.mob_controller.mixin;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PlayerRideableJumping;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Cow;
 import net.minecraft.world.entity.animal.Dolphin;
@@ -25,6 +29,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
 /**
  * 生物实体通用行为注入。
  *
@@ -50,7 +55,10 @@ public abstract class MixinLivingEntity extends Entity {
     private void injectCanAttack(LivingEntity target, CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValue()) {
             if ((Object) (this) instanceof LivingEntity mob) {
-                if (MobControlledData.isControlledEntity(mob) && MobControlUtil.isEnemy(mob, target) && !(mob instanceof EntityControlledWitch)) {
+                if (MobControlledData.isControlledEntity(mob) && MobControlUtil.isEnemy(
+                    mob,
+                    target
+                ) && !(mob instanceof EntityControlledWitch)) {
                     cir.cancel();
                 }
             }
@@ -82,7 +90,7 @@ public abstract class MixinLivingEntity extends Entity {
 
         // 其他生物受到被控制生物攻击的反击
         if (attacker instanceof LivingEntity controlledMob && MobControlledData.isControlledEntity(controlledMob)
-                && livingEntity instanceof Mob otherMob && !MobControlledData.isControlledEntity(otherMob)) {
+            && livingEntity instanceof Mob otherMob && !MobControlledData.isControlledEntity(otherMob)) {
             // 排除创造/旁观者模式
             if (source.getEntity() instanceof Player player) {
                 if (player.isCreative() || player.isSpectator()) {
@@ -103,12 +111,12 @@ public abstract class MixinLivingEntity extends Entity {
         Object thiz = this;
         if (thiz instanceof LivingEntity mob) {
             if (mob instanceof Guardian ||
-                    mob instanceof Hoglin ||
-                    mob instanceof Zoglin ||
-                    mob instanceof Ravager ||
-                    mob instanceof Cow ||
-                    mob instanceof Sheep ||
-                    mob instanceof Dolphin) {
+                mob instanceof Hoglin ||
+                mob instanceof Zoglin ||
+                mob instanceof Ravager ||
+                mob instanceof Cow ||
+                mob instanceof Sheep ||
+                mob instanceof Dolphin) {
                 this.setRot(player.getYRot(), player.getXRot() * 0.5F);
                 this.yRotO = this.yBodyRot = this.yHeadRot = this.getYRot();
                 if (mob instanceof Guardian && !mob.isInWaterOrBubble()) {
@@ -121,17 +129,21 @@ public abstract class MixinLivingEntity extends Entity {
     /**
      * 注入 {@code getRiddenInput} 头部：接管特定生物的骑乘输入向量。
      */
-    @Inject(method = "getRiddenInput(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;", at = @At("HEAD"), cancellable = true)
+    @Inject(
+        method = "getRiddenInput(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;",
+        at = @At("HEAD"),
+        cancellable = true
+    )
     private void injectGetRiddenInput(Player player, Vec3 travelVector, CallbackInfoReturnable<Vec3> cir) {
         Object thiz = this;
         if (thiz instanceof LivingEntity mob) {
             if (mob instanceof Guardian ||
-                    mob instanceof Hoglin ||
-                    mob instanceof Zoglin ||
-                    mob instanceof Ravager ||
-                    mob instanceof Cow ||
-                    mob instanceof Sheep ||
-                    mob instanceof Dolphin) {
+                mob instanceof Hoglin ||
+                mob instanceof Zoglin ||
+                mob instanceof Ravager ||
+                mob instanceof Cow ||
+                mob instanceof Sheep ||
+                mob instanceof Dolphin) {
                 double x = player.xxa * 0.5;
                 double y = 0;
                 double z = player.zza;
@@ -175,11 +187,11 @@ public abstract class MixinLivingEntity extends Entity {
         Object thiz = this;
         if (thiz instanceof LivingEntity mob) {
             if (mob instanceof Guardian ||
-                    mob instanceof Hoglin ||
-                    mob instanceof Zoglin ||
-                    mob instanceof Ravager ||
-                    mob instanceof Cow ||
-                    mob instanceof Sheep) {
+                mob instanceof Hoglin ||
+                mob instanceof Zoglin ||
+                mob instanceof Ravager ||
+                mob instanceof Cow ||
+                mob instanceof Sheep) {
                 cir.setReturnValue((float) mob.getAttributeValue(Attributes.MOVEMENT_SPEED));
             }
             if (mob instanceof Dolphin) {

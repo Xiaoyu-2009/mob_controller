@@ -3,8 +3,8 @@ package net.xiaoyu.mob_controller.capability;
 import net.minecraft.nbt.CompoundTag;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
-import javax.annotation.Nullable;
 import java.util.UUID;
+import javax.annotation.Nullable;
 
 /**
  * 存储单个生物的控制状态数据，作为 Forge Capability 附加到每个 {@link net.minecraft.world.entity.Mob} 实体上。
@@ -32,7 +32,9 @@ public class MobControlCapability {
     private long lastHealTime = 0;
     private boolean isSystemAttack = false;
 
-    /** 无参构造器，所有字段使用默认值（未控制、跟随模式）。 */
+    /**
+     * 无参构造器，所有字段使用默认值（未控制、跟随模式）。
+     */
     public MobControlCapability() {
     }
 
@@ -90,7 +92,7 @@ public class MobControlCapability {
      * 获取上次治愈的游戏时间刻（game tick），用于治愈冷却判断。
      *
      * @return 上次治愈时的 {@link net.minecraft.world.level.Level#getGameTime()} 值；
-     *         默认为 {@code 0L}（从未被治愈）
+     * 默认为 {@code 0L}（从未被治愈）
      */
     public long getLastHealTime() {
         return lastHealTime;

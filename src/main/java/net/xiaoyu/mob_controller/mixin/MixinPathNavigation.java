@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Set;
+
 /**
  * 生物寻路行为注入。
  *
@@ -28,8 +29,10 @@ public abstract class MixinPathNavigation {
      * 注入 {@code createPath} 头部：停留模式下直接返回空路径。
      */
     @Inject(method = "createPath(Ljava/util/Set;IZIF)Lnet/minecraft/world/level/pathfinder/Path;", at = @At("HEAD"), cancellable = true)
-    private void injectCreatePath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward,
-                                  int accuracy, float followRange, CallbackInfoReturnable<Path> cir) {
+    private void injectCreatePath(
+        Set<BlockPos> targets, int regionOffset, boolean offsetUpward,
+        int accuracy, float followRange, CallbackInfoReturnable<Path> cir
+    ) {
         if (MobControlledData.isControlledEntity(mob) && MobControlledData.getControlMode(mob) == MobControlledData.ControlMode.STAY) {
             cir.setReturnValue(null);
         }

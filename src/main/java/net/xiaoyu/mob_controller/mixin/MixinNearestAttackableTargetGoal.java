@@ -13,8 +13,9 @@ import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-import javax.annotation.Nullable;
 import java.util.function.Predicate;
+import javax.annotation.Nullable;
+
 /**
  * 最近可攻击目标 AI 注入。
  *
@@ -25,16 +26,22 @@ public abstract class MixinNearestAttackableTargetGoal {
     /**
      * 包装 {@code TargetingConditions#selector}：拼接受控生物敌友过滤谓词。
      */
-    @WrapOperation(method = "<init>(Lnet/minecraft/world/entity/Mob;Ljava/lang/Class;IZZLjava/util/function/Predicate;)V",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/ai/targeting/TargetingConditions;selector(Ljava/util/function/Predicate;)Lnet/minecraft/world/entity/ai/targeting/TargetingConditions;"
-            )
+    @WrapOperation(
+        method = "<init>(Lnet/minecraft/world/entity/Mob;Ljava/lang/Class;IZZLjava/util/function/Predicate;)V",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/ai/targeting/TargetingConditions;selector(Ljava/util/function/Predicate;)Lnet/minecraft/world/entity/ai/targeting/TargetingConditions;"
+        )
     )
-    private TargetingConditions wrapSelector(TargetingConditions instance, @Nullable Predicate<LivingEntity> customPredicate,
-                                             Operation<TargetingConditions> original, @Local(argsOnly = true) Mob mob) {
+    private TargetingConditions wrapSelector(
+        TargetingConditions instance, @Nullable Predicate<LivingEntity> customPredicate,
+        Operation<TargetingConditions> original, @Local(argsOnly = true) Mob mob
+    ) {
         Predicate<LivingEntity> predicate = customPredicate != null ? customPredicate : livingEntity -> true;
-        predicate = predicate.and(livingEntity -> !MobControlledData.isControlledEntity(mob) || !MobControlUtil.isEnemy(mob, livingEntity) || (mob instanceof EntityControlledWitch));
+        predicate = predicate.and(livingEntity -> !MobControlledData.isControlledEntity(mob) || !MobControlUtil.isEnemy(
+            mob,
+            livingEntity
+        ) || (mob instanceof EntityControlledWitch));
         return original.call(instance, predicate);
     }
 }

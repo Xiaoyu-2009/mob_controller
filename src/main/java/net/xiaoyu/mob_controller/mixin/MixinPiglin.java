@@ -27,6 +27,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 /**
  * 猪灵行为注入。
  *
@@ -57,7 +58,17 @@ public abstract class MixinPiglin extends AbstractPiglin implements CrossbowAtta
             thrownpotion.setXRot(thrownpotion.getXRot() + 20.0F);
             thrownpotion.shoot(d0, d1 + d3 * 0.2D, d2, 0.75F, 8.0F);
             if (!this.isSilent()) {
-                this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITCH_THROW, this.getSoundSource(), 1.0F, 0.8F + this.random.nextFloat() * 0.4F);
+                this.level()
+                    .playSound(
+                        null,
+                        this.getX(),
+                        this.getY(),
+                        this.getZ(),
+                        SoundEvents.WITCH_THROW,
+                        this.getSoundSource(),
+                        1.0F,
+                        0.8F + this.random.nextFloat() * 0.4F
+                    );
             }
 
             this.level().addFreshEntity(thrownpotion);
@@ -71,15 +82,19 @@ public abstract class MixinPiglin extends AbstractPiglin implements CrossbowAtta
      */
     @Inject(method = "customServerAiStep()V", at = @At("HEAD"))
     private void injectCustomServerAiStep(CallbackInfo ci) {
-        if (MobControlledData.isControlledEntity(this) && this.getPersistentData().getLong("mob_controller.piglinFireResistancePotion") < this.tickCount) {
+        if (MobControlledData.isControlledEntity(this) && this.getPersistentData()
+                                                              .getLong("mob_controller.piglinFireResistancePotion") < this.tickCount) {
             double followRange = this.getAttributeValue(Attributes.FOLLOW_RANGE);
-            LivingEntity target = this.level().getNearestEntity(this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(followRange, 4, followRange), t -> true),
-                    TargetingConditions.forNonCombat().range(followRange)
-                            .selector(livingEntity -> !MobControlUtil.isEnemy(this, livingEntity)),
-                    this, this.getX(), this.getEyeY(), this.getZ());
+            LivingEntity target = this.level().getNearestEntity(
+                this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(followRange, 4, followRange), t -> true),
+                TargetingConditions.forNonCombat().range(followRange)
+                    .selector(livingEntity -> !MobControlUtil.isEnemy(this, livingEntity)),
+                this, this.getX(), this.getEyeY(), this.getZ()
+            );
 
             if (target != null) {
-                boolean isOnFire = target.isOnFire() || target.getLastDamageSource() != null && target.getLastDamageSource().is(DamageTypeTags.IS_FIRE);
+                boolean isOnFire = target.isOnFire() || target.getLastDamageSource() != null && target.getLastDamageSource()
+                    .is(DamageTypeTags.IS_FIRE);
                 if (isOnFire && !target.hasEffect(MobEffects.FIRE_RESISTANCE)) {
                     this.performRangedAttack(target, 1.6F);
                     this.getPersistentData().putLong("mob_controller.piglinFireResistancePotion", this.tickCount + 20);
@@ -91,7 +106,10 @@ public abstract class MixinPiglin extends AbstractPiglin implements CrossbowAtta
     /**
      * 包装 {@code wantsToPickUp}：受控猪灵仅允许拾取猪灵货币。
      */
-    @WrapOperation(method = "wantsToPickUp(Lnet/minecraft/world/item/ItemStack;)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/piglin/Piglin;canPickUpLoot()Z"))
+    @WrapOperation(
+        method = "wantsToPickUp(Lnet/minecraft/world/item/ItemStack;)Z",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/piglin/Piglin;canPickUpLoot()Z")
+    )
     private boolean wrapOperationWantsToPickUp(Piglin instance, Operation<Boolean> original, @Local(argsOnly = true) ItemStack itemStack) {
         if (MobControlledData.isControlledEntity(instance)) {
             return itemStack.isPiglinCurrency();

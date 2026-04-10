@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import javax.annotation.Nullable;
+
 /**
  * 实体通用行为注入。
  *
@@ -36,7 +37,10 @@ public abstract class MixinEntity implements Nameable, EntityAccess, CommandSour
                 cir.setReturnValue(true);
             } else if (LivingEntity.class.isInstance(this)) {
                 LivingEntity mob = (LivingEntity) (Object) this;
-                if (MobControlledData.isControlledEntity(mob) && !MobControlUtil.isEnemy(mob, livingEntity) && !(mob instanceof EntityControlledWitch)) {
+                if (MobControlledData.isControlledEntity(mob) && !MobControlUtil.isEnemy(
+                    mob,
+                    livingEntity
+                ) && !(mob instanceof EntityControlledWitch)) {
                     cir.setReturnValue(true);
                 }
             }
@@ -65,7 +69,8 @@ public abstract class MixinEntity implements Nameable, EntityAccess, CommandSour
         Object thiz = this;
         if (thiz instanceof LivingEntity mob) {
             Entity entity = this.getFirstPassenger();
-            if (entity != null && MobControlledData.isControlledEntity(mob) && MobControlledData.getControllerUUID(mob).equals(entity.getUUID())) {
+            if (entity != null && MobControlledData.isControlledEntity(mob) && MobControlledData.getControllerUUID(mob)
+                .equals(entity.getUUID())) {
                 if (entity instanceof LivingEntity living) {
                     cir.setReturnValue(living);
                 }

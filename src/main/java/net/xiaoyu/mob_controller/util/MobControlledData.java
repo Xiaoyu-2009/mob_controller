@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * 维护“被控制生物”的运行时数据与全局辅助逻辑。
  *
@@ -33,38 +34,22 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  */
 public class MobControlledData {
-    /** 玩家 -> 已控制的高生命值生物类型集合。 */
-    private static final Map<UUID, Set<EntityType<?>>> PLAYER_CONTROLLED_HIGH_HEALTH_MOBS = new ConcurrentHashMap<>();
-    /** 待执行的延迟重生任务。键为死亡生物 UUID。 */
-    private static final Map<UUID, PendingRespawnData> PENDING_RESPAWNS = new ConcurrentHashMap<>();
-    /** 判定为“高生命值生物”的生命值阈值。 */
-    public static final int HIGH_HEALTH_THRESHOLD = 150;
-    /** 生物死亡后触发重生的延迟刻数（600 tick = 30 秒）。 */
-    public static final int RESPAWN_DELAY_TICKS = 600;
-
-    private record PendingRespawnData(UUID deadMobUUID, UUID controllerUUID, CompoundTag entityNbt,
-                                      CompoundTag capabilityNbt, int triggerTick,
-                                      net.minecraft.resources.ResourceKey<Level> deathDimension,
-                                      BlockPos deathPos) {
-    }
-
     /**
-     * 控制模式。
+     * 判定为“高生命值生物”的生命值阈值。
      */
-    public enum ControlMode {
-        /**
-         * 跟随
-         */
-        FOLLOW,
-        /**
-         * 停留
-         */
-        STAY,
-        /**
-         * 游荡
-         */
-        WANDER,
-    }
+    public static final int HIGH_HEALTH_THRESHOLD = 150;
+    /**
+     * 生物死亡后触发重生的延迟刻数（600 tick = 30 秒）。
+     */
+    public static final int RESPAWN_DELAY_TICKS = 600;
+    /**
+     * 玩家 -> 已控制的高生命值生物类型集合。
+     */
+    private static final Map<UUID, Set<EntityType<?>>> PLAYER_CONTROLLED_HIGH_HEALTH_MOBS = new ConcurrentHashMap<>();
+    /**
+     * 待执行的延迟重生任务。键为死亡生物 UUID。
+     */
+    private static final Map<UUID, PendingRespawnData> PENDING_RESPAWNS = new ConcurrentHashMap<>();
 
     /**
      * 将生物加入控制状态，并初始化为“跟随”模式。
@@ -133,7 +118,6 @@ public class MobControlledData {
         return controlledMobs != null && controlledMobs.contains(mob.getType());
     }
 
-    // 列表中移除[被控制的生物死亡]
     /**
      * 在被控制生物死亡时移除高生命值控制记录。
      *
@@ -159,6 +143,8 @@ public class MobControlledData {
             }
         }
     }
+
+    // 列表中移除[被控制的生物死亡]
 
     /**
      * 判断生物是否处于被控制状态。
@@ -289,10 +275,11 @@ public class MobControlledData {
         entityNbt.putString("id", EntityType.getKey(mob.getType()).toString());
 
         CompoundTag capabilityNbt = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
-                .map(MobControlCapability::serializeNBT)
-                .orElse(new CompoundTag());
+            .map(MobControlCapability::serializeNBT)
+            .orElse(new CompoundTag());
 
-        PENDING_RESPAWNS.put(mob.getUUID(), new PendingRespawnData(
+        PENDING_RESPAWNS.put(
+            mob.getUUID(), new PendingRespawnData(
                 mob.getUUID(),
                 controllerUUID,
                 entityNbt,
@@ -300,7 +287,8 @@ public class MobControlledData {
                 level.getServer().getTickCount() + RESPAWN_DELAY_TICKS,
                 level.dimension(),
                 mob.blockPosition()
-        ));
+            )
+        );
         return true;
     }
 
@@ -329,10 +317,18 @@ public class MobControlledData {
             java.util.Optional<Entity> createdEntity = EntityType.create(nbt, targetLevel);
             if (createdEntity.isPresent() && createdEntity.get() instanceof Mob respawnedMob) {
                 if (controller != null) {
-                    respawnedMob.moveTo(controller.getX(), controller.getY(), controller.getZ(), respawnedMob.getYRot(), respawnedMob.getXRot());
+                    respawnedMob.moveTo(
+                        controller.getX(),
+                        controller.getY(),
+                        controller.getZ(),
+                        respawnedMob.getYRot(),
+                        respawnedMob.getXRot()
+                    );
                 } else {
-                    respawnedMob.moveTo(data.deathPos().getX() + 0.5D, data.deathPos().getY(), data.deathPos().getZ() + 0.5D,
-                            respawnedMob.getYRot(), respawnedMob.getXRot());
+                    respawnedMob.moveTo(
+                        data.deathPos().getX() + 0.5D, data.deathPos().getY(), data.deathPos().getZ() + 0.5D,
+                        respawnedMob.getYRot(), respawnedMob.getXRot()
+                    );
                 }
 
                 respawnedMob.setDeltaMovement(0, 0, 0);
@@ -342,11 +338,37 @@ public class MobControlledData {
 
                 addControlledMob(data.controllerUUID(), respawnedMob);
                 respawnedMob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
-                        .ifPresent(cap -> cap.deserializeNBT(data.capabilityNbt().copy()));
+                    .ifPresent(cap -> cap.deserializeNBT(data.capabilityNbt().copy()));
                 clearSystemAttack(respawnedMob);
             }
 
             PENDING_RESPAWNS.remove(entry.getKey());
         }
+    }
+
+    /**
+     * 控制模式。
+     */
+    public enum ControlMode {
+        /**
+         * 跟随
+         */
+        FOLLOW,
+        /**
+         * 停留
+         */
+        STAY,
+        /**
+         * 游荡
+         */
+        WANDER,
+    }
+
+    private record PendingRespawnData(
+        UUID deadMobUUID, UUID controllerUUID, CompoundTag entityNbt,
+        CompoundTag capabilityNbt, int triggerTick,
+        net.minecraft.resources.ResourceKey<Level> deathDimension,
+        BlockPos deathPos
+    ) {
     }
 }

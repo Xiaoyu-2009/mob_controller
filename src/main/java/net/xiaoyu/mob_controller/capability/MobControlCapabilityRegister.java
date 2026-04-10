@@ -1,6 +1,9 @@
 package net.xiaoyu.mob_controller.capability;
 
-import net.minecraftforge.common.capabilities.*;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.common.capabilities.CapabilityToken;
+import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -21,7 +24,8 @@ public class MobControlCapabilityRegister {
      * <p>在 {@link #registerCapabilities(RegisterCapabilitiesEvent)} 被调用之前，
      * 该令牌处于未初始化状态，不应提前使用。</p>
      */
-    public static final Capability<MobControlCapability> MOB_CONTROL_CAPABILITY = CapabilityManager.get(new CapabilityToken<>() {});
+    public static final Capability<MobControlCapability> MOB_CONTROL_CAPABILITY = CapabilityManager.get(new CapabilityToken<>() {
+    });
 
     /**
      * 在 Forge 的 {@link RegisterCapabilitiesEvent} 中注册 {@link MobControlCapability} 类型，

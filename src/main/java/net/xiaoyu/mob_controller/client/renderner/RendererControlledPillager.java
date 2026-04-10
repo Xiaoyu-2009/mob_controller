@@ -9,13 +9,16 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.xiaoyu.mob_controller.entity.EntityControlledPillager;
+
 /**
  * 受控掠夺者实体渲染器。
  */
 
 @OnlyIn(Dist.CLIENT)
 public class RendererControlledPillager extends IllagerRenderer<EntityControlledPillager> {
-    /** 掠夺者纹理。 */
+    /**
+     * 掠夺者纹理。
+     */
     private static final ResourceLocation PILLAGER = new ResourceLocation("textures/entity/illager/pillager.png");
 
     /**

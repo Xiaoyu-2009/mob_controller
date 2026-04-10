@@ -5,9 +5,10 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
-import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.UUID;
+import javax.annotation.Nullable;
+
 /**
  * 可控实体接口。
  *
@@ -44,7 +45,7 @@ public interface IControllableEntity extends OwnableEntity {
             return false;
         }
         return !(target instanceof Mob mob) || !MobControlledData.isControlledEntity(target)
-                || !Objects.equals(MobControlledData.getControllerUUID(mob), this.getOwnerUUID());
+               || !Objects.equals(MobControlledData.getControllerUUID(mob), this.getOwnerUUID());
     }
 
     /**
@@ -61,7 +62,7 @@ public interface IControllableEntity extends OwnableEntity {
             return true;
         }
         return living instanceof Mob mob && MobControlledData.isControlledEntity(living)
-                && Objects.equals(MobControlledData.getControllerUUID(mob), this.getOwnerUUID());
+               && Objects.equals(MobControlledData.getControllerUUID(mob), this.getOwnerUUID());
     }
 
     /**

@@ -10,6 +10,7 @@ import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import java.util.Objects;
 import java.util.function.Supplier;
+
 /**
  * 客户端发送到服务端的“切换控制模式”数据包。
  *
@@ -17,7 +18,9 @@ import java.util.function.Supplier;
  */
 
 public class ToggleControlModePacket {
-    /** 目标生物实体 ID。 */
+    /**
+     * 目标生物实体 ID。
+     */
     private final int entityId;
 
     /**
@@ -59,7 +62,10 @@ public class ToggleControlModePacket {
             ServerPlayer player = ctx.get().getSender();
 
             if (player != null && player.level().getEntity(this.entityId) instanceof Mob mob) {
-                if (MobControlledData.isControlledEntity(mob) && Objects.equals(MobControlledData.getControllerUUID(mob), player.getUUID())) {
+                if (MobControlledData.isControlledEntity(mob) && Objects.equals(
+                    MobControlledData.getControllerUUID(mob),
+                    player.getUUID()
+                )) {
 
                     MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
 

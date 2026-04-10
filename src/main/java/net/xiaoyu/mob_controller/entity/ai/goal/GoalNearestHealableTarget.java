@@ -17,7 +17,9 @@ import java.util.function.Predicate;
  * @see NearestHealableRaiderTargetGoal
  */
 public class GoalNearestHealableTarget<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
-    /** 默认冷却（tick）。 */
+    /**
+     * 默认冷却（tick）。
+     */
     private static final int DEFAULT_COOLDOWN = 200;
     private int cooldown = 0;
 
@@ -43,7 +45,9 @@ public class GoalNearestHealableTarget<T extends LivingEntity> extends NearestAt
         return this.cooldown;
     }
 
-    /** 每刻递减冷却。 */
+    /**
+     * 每刻递减冷却。
+     */
     public void decrementCooldown() {
         --this.cooldown;
     }

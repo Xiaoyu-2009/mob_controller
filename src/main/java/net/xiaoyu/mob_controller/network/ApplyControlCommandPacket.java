@@ -10,6 +10,7 @@ import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import java.util.function.Supplier;
+
 /**
  * 客户端发送到服务端的“控制令”数据包。
  *
@@ -17,7 +18,9 @@ import java.util.function.Supplier;
  */
 
 public class ApplyControlCommandPacket {
-    /** 本次下发的目标控制模式。 */
+    /**
+     * 本次下发的目标控制模式。
+     */
     private final MobControlledData.ControlMode mode;
 
     /**

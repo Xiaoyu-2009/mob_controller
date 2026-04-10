@@ -5,19 +5,28 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
+
 /**
  * 受控生物装备库存。
  *
  * <p>将菜单索引映射到生物装备槽位，并在服务端同步写回实体。</p>
  */
 public class InventoryArmor extends SimpleContainer {
-    /** 菜单槽位与生物装备槽位映射。 */
+    /**
+     * 菜单槽位与生物装备槽位映射。
+     */
     private static final EquipmentSlot[] SLOTS = {
-            EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD,
-            EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+        EquipmentSlot.MAINHAND,
+        EquipmentSlot.OFFHAND,
+        EquipmentSlot.HEAD,
+        EquipmentSlot.CHEST,
+        EquipmentSlot.LEGS,
+        EquipmentSlot.FEET
     };
 
-    /** 被编辑装备的目标生物。 */
+    /**
+     * 被编辑装备的目标生物。
+     */
     private final Mob mob;
 
     /**

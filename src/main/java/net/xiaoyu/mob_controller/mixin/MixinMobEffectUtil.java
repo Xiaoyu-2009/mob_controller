@@ -17,9 +17,10 @@ import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Predicate;
+import javax.annotation.Nullable;
+
 /**
  * 状态效果分发工具注入。
  *
@@ -30,15 +31,18 @@ public abstract class MixinMobEffectUtil {
     /**
      * 包装 {@code addEffectToPlayersAround} 内玩家筛选：为受控监守者/远古守卫者与友方过滤效果目标。
      */
-    @WrapOperation(method = "addEffectToPlayersAround(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/Vec3;DLnet/minecraft/world/effect/MobEffectInstance;I)Ljava/util/List;",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/server/level/ServerLevel;getPlayers(Ljava/util/function/Predicate;)Ljava/util/List;"
-            )
+    @WrapOperation(
+        method = "addEffectToPlayersAround(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/Vec3;DLnet/minecraft/world/effect/MobEffectInstance;I)Ljava/util/List;",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/server/level/ServerLevel;getPlayers(Ljava/util/function/Predicate;)Ljava/util/List;"
+        )
     )
-    private static List<ServerPlayer> wrapAddEffectToPlayersAround(ServerLevel instance, Predicate<? super ServerPlayer> predicate, Operation<List<ServerPlayer>> original,
-                                                                   @Local(argsOnly = true) @Nullable Entity source,
-                                                                   @Local(argsOnly = true) MobEffectInstance effect) {
+    private static List<ServerPlayer> wrapAddEffectToPlayersAround(
+        ServerLevel instance, Predicate<? super ServerPlayer> predicate, Operation<List<ServerPlayer>> original,
+        @Local(argsOnly = true) @Nullable Entity source,
+        @Local(argsOnly = true) MobEffectInstance effect
+    ) {
         if (!(source instanceof Mob mob)) {
             return original.call(instance, predicate);
         }

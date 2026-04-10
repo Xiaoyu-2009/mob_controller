@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Objects;
+
 /**
  * 远古守卫者行为注入。
  *
@@ -25,13 +26,19 @@ import java.util.Objects;
  */
 @Mixin(ElderGuardian.class)
 public abstract class MixinElderGuardian extends Guardian {
-    /** 挖掘疲劳持续时间。 */
+    /**
+     * 挖掘疲劳持续时间。
+     */
     @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_EFFECT_DURATION = 6000;
-    /** 挖掘疲劳等级。 */
+    /**
+     * 挖掘疲劳等级。
+     */
     @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER = 2;
-    /** 效果刷新阈值。 */
+    /**
+     * 效果刷新阈值。
+     */
     @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_REFRESH_MARGIN = 40;
 
@@ -50,15 +57,22 @@ public abstract class MixinElderGuardian extends Guardian {
 
         LivingEntity target = this.getTarget();
         if (target instanceof ServerPlayer serverPlayer && MobControlUtil.isEnemy(this, serverPlayer)) {
-            MobEffectInstance effect = new MobEffectInstance(MobEffects.DIG_SLOWDOWN,
-                    CONTROLLED_ELDER_GUARDIAN_EFFECT_DURATION,
-                    CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER);
+            MobEffectInstance effect = new MobEffectInstance(
+                MobEffects.DIG_SLOWDOWN,
+                CONTROLLED_ELDER_GUARDIAN_EFFECT_DURATION,
+                CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER
+            );
 
             if (!serverPlayer.hasEffect(MobEffects.DIG_SLOWDOWN)
-                    || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN)).getAmplifier() < CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER
-                    || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN)).endsWithin(CONTROLLED_ELDER_GUARDIAN_REFRESH_MARGIN)) {
+                || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN))
+                       .getAmplifier() < CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER
+                || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN))
+                    .endsWithin(CONTROLLED_ELDER_GUARDIAN_REFRESH_MARGIN)) {
                 serverPlayer.addEffect(new MobEffectInstance(effect), this);
-                serverPlayer.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT, this.isSilent() ? 0 : 1));
+                serverPlayer.connection.send(new ClientboundGameEventPacket(
+                    ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT,
+                    this.isSilent() ? 0 : 1
+                ));
             }
         }
     }

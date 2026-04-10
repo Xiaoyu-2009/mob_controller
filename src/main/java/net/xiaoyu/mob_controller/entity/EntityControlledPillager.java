@@ -21,8 +21,9 @@ import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 import net.xiaoyu.mob_controller.entity.ai.goal.GoalOwnerHurtByTarget;
 import net.xiaoyu.mob_controller.entity.ai.goal.GoalOwnerHurtTarget;
 
-import javax.annotation.Nullable;
 import java.util.UUID;
+import javax.annotation.Nullable;
+
 /**
  * 受控掠夺者实体。
  *
@@ -38,7 +39,9 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         this.setCanJoinRaid(false);
     }
 
-    /** 注册目标与行为 AI。 */
+    /**
+     * 注册目标与行为 AI。
+     */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
@@ -67,21 +70,30 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         itemstack.setDamageValue(damageValue);
     }
 
-    /** 在和平模式下不自动消失。 */
+    /**
+     * 在和平模式下不自动消失。
+     */
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;
     }
 
-    /** 获取主人 UUID。 */
+    /**
+     * 获取主人 UUID。
+     */
     @Nullable
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public UUID getOwnerUUID() {
-        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::getControllerUUID).orElse(null);
+        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+            .resolve()
+            .map(MobControlCapability::getControllerUUID)
+            .orElse(null);
     }
 
-    /** 设置主人 UUID。 */
+    /**
+     * 设置主人 UUID。
+     */
     @Override
     @SuppressWarnings("AlibabaLowerCamelCaseVariableNaming")
     public void setOwnerUUID(@Nullable UUID uuid) {
@@ -92,9 +104,14 @@ public class EntityControlledPillager extends Pillager implements IControllableE
         });
     }
 
-    /** 判断是否受控。 */
+    /**
+     * 判断是否受控。
+     */
     @Override
     public boolean isControlled() {
-        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).resolve().map(MobControlCapability::isControlled).orElse(false);
+        return this.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+            .resolve()
+            .map(MobControlCapability::isControlled)
+            .orElse(false);
     }
 }

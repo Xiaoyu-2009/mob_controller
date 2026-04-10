@@ -27,6 +27,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.EntityMobGriefingEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
@@ -35,7 +36,6 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -52,6 +52,7 @@ import net.xiaoyu.mob_controller.util.MobControlledData;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+
 /**
  * 生物控制系统事件处理器。
  *
@@ -67,8 +68,8 @@ public class MobControllerEvent {
     public static void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Mob) {
             event.addCapability(
-                    new ResourceLocation("mob_controller", "mob_control"),
-                    new MobControlCapabilityProvider()
+                new ResourceLocation("mob_controller", "mob_control"),
+                new MobControlCapabilityProvider()
             );
         }
     }
@@ -88,7 +89,8 @@ public class MobControllerEvent {
             return;
         }
 
-        if (!(entity instanceof Animal) && !(entity instanceof Piglin) && entity instanceof Mob mob && MobControlledData.isControlledEntity(mob)) {
+        if (!(entity instanceof Animal) && !(entity instanceof Piglin) && entity instanceof Mob mob && MobControlledData.isControlledEntity(
+            mob)) {
             event.setResult(Event.Result.DENY);
         }
     }
@@ -129,7 +131,7 @@ public class MobControllerEvent {
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof Mob mob && mob.level() instanceof ServerLevel serverLevel
-                && MobControlledData.isControlledEntity(mob)) {
+            && MobControlledData.isControlledEntity(mob)) {
             if (MobControlledData.scheduleRespawn(mob, serverLevel)) {
                 MinecraftServer server = serverLevel.getServer();
                 String message = mob.getDisplayName().getString() + "死了，将在30秒后复活";
@@ -171,7 +173,9 @@ public class MobControllerEvent {
                     else if (mob instanceof AbstractPiglin) {
                         Brain<?> brain = mob.getBrain();
                         Optional<LivingEntity> attackTarget = brain.getMemory(MemoryModuleType.ATTACK_TARGET);
-                        hasValidTarget = brain.getMemory(MemoryModuleType.ANGRY_AT).isPresent() && attackTarget.isPresent() && attackTarget.get().isAlive() && !attackTarget.get().isDeadOrDying();
+                        hasValidTarget = brain.getMemory(MemoryModuleType.ANGRY_AT)
+                                             .isPresent() && attackTarget.isPresent() && attackTarget.get().isAlive() && !attackTarget.get()
+                            .isDeadOrDying();
                     } else {
                         LivingEntity target = mob.getTarget();
                         hasValidTarget = target != null && target.isAlive() && !target.isDeadOrDying();
@@ -339,7 +343,7 @@ public class MobControllerEvent {
 
                 // 目标不存在/死亡/不再存活时清除
                 if (target == null || target.isDeadOrDying() || !target.isAlive() ||
-                        !target.level().equals(mob.level()) || target.distanceTo(mob) > 64.0F) {
+                    !target.level().equals(mob.level()) || target.distanceTo(mob) > 64.0F) {
 
                     if (target != null) {
                         mob.setTarget(null);
@@ -352,8 +356,10 @@ public class MobControllerEvent {
 
                 if (!mob.level().isClientSide) {
                     mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap ->
-                            NetWorkManager.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(event::getEntity),
-                                    new MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT())));
+                        NetWorkManager.INSTANCE.send(
+                            PacketDistributor.TRACKING_ENTITY_AND_SELF.with(event::getEntity),
+                            new MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT())
+                        ));
                 }
             }
         }
@@ -393,16 +399,19 @@ public class MobControllerEvent {
     @SubscribeEvent
     public static void onPlayerEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (event.getTarget() instanceof Mob mob
-                && !event.getEntity().getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())
-                && !event.getEntity().getMainHandItem().is(ModItems.HEART_CONTRACT_ITEM.get())) {
+            && !event.getEntity().getMainHandItem().is(ModItems.MOB_CONTROLLER_ITEM.get())
+            && !event.getEntity().getMainHandItem().is(ModItems.HEART_CONTRACT_ITEM.get())) {
             if (mob instanceof Guardian ||
-                    mob instanceof Hoglin ||
-                    mob instanceof Zoglin ||
-                    mob instanceof Ravager ||
-                    mob instanceof Cow ||
-                    mob instanceof Sheep ||
-                    mob instanceof Dolphin) {
-                if (MobControlledData.isControlledEntity(mob) && Objects.equals(MobControlledData.getControllerUUID(mob), event.getEntity().getUUID())) {
+                mob instanceof Hoglin ||
+                mob instanceof Zoglin ||
+                mob instanceof Ravager ||
+                mob instanceof Cow ||
+                mob instanceof Sheep ||
+                mob instanceof Dolphin) {
+                if (MobControlledData.isControlledEntity(mob) && Objects.equals(
+                    MobControlledData.getControllerUUID(mob),
+                    event.getEntity().getUUID()
+                )) {
                     event.getEntity().startRiding(event.getTarget());
                 }
             }
