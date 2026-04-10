@@ -12,6 +12,7 @@ import net.minecraft.world.level.Level;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -20,8 +21,11 @@ import java.util.Objects;
 
 @Mixin(ElderGuardian.class)
 public abstract class MixinElderGuardian extends Guardian {
+    @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_EFFECT_DURATION = 6000;
+    @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER = 2;
+    @Unique
     private static final int CONTROLLED_ELDER_GUARDIAN_REFRESH_MARGIN = 40;
 
     public MixinElderGuardian(EntityType<? extends Guardian> entityType, Level level) {
