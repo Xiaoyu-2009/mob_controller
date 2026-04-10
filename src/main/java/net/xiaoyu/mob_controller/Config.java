@@ -19,11 +19,9 @@ public class Config {
      */
     public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    /**
-     * 已构建完成的配置规格，在 {@link MobController} 构造器中通过
-     * {@link net.minecraftforge.fml.ModLoadingContext#registerConfig} 注册。
-     */
-    public static final ForgeConfigSpec SPEC;
+    static {
+        BUILDER.push("Mob Controller Config");
+    }
 
     /**
      * 不可被控制的生物类型黑名单。
@@ -32,7 +30,24 @@ public class Config {
      * 例如 {@code "minecraft:wolf"}。默认值包含所有原版可驯服的生物，
      * 以避免与原版驯服机制冲突。</p>
      */
-    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> BLACKLISTED_MOBS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> BLACKLISTED_MOBS = BUILDER
+        .comment("List of mob that cannot be controlled")
+        .defineList(
+            "blacklisted_mobs", Arrays.asList(
+                "minecraft:parrot",
+                "minecraft:wolf",
+                "minecraft:cat",
+                "minecraft:ocelot",
+                "minecraft:horse",
+                "minecraft:donkey",
+                "minecraft:mule",
+                "minecraft:llama",
+                "minecraft:trader_llama",
+                "minecraft:skeleton_horse",
+                "minecraft:zombie_horse",
+                "minecraft:camel"
+            ), obj -> obj instanceof String
+        );
 
     /**
      * 在 STAY（停留）模式下需要进行坐标焊死（coordinate-weld）处理的特殊 AI 飞行生物列表。
@@ -43,7 +58,17 @@ public class Config {
      *
      * @see net.xiaoyu.mob_controller.util.MobControlUtil#applyStayFlightCoordinateWeld(net.minecraft.world.entity.Mob)
      */
-    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> STAY_WELDED_SPECIAL_AI_MOBS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> STAY_WELDED_SPECIAL_AI_MOBS = BUILDER
+        .comment("Special AI mobs that should be coordinate-welded in STAY mode")
+        .defineList(
+            "stay_welded_special_ai_mobs", Arrays.asList(
+                "minecraft:ghast",
+                "minecraft:vex",
+                "minecraft:blaze",
+                "minecraft:phantom",
+                "minecraft:bat"
+            ), obj -> obj instanceof String
+        );
 
     /**
      * 是否始终使控制尝试成功（即忽略成功率随机计算）。
@@ -51,47 +76,36 @@ public class Config {
      * <p>若设为 {@code true}，则无论生物最大生命值多少，使用生物控制器物品时均可 100% 成功控制。
      * 建议调试时或服务器管理员测试时使用。默认值为 {@code false}。</p>
      */
-    public static final ForgeConfigSpec.BooleanValue ALWAYS_SUCCESS;
+    public static final ForgeConfigSpec.BooleanValue ALWAYS_SUCCESS = BUILDER
+        .comment("Whether to always succeed in controlling mobs")
+        .define("always_success", false);
 
-    static {
-        BUILDER.push("Mob Controller Config");
+    /**
+     * 受控生物在脱战后开始自动回血前需要等待的 tick 数。
+     *
+     * <p>默认值为 {@code 100}（5 秒）。设为 {@code 0} 表示一旦没有有效战斗目标就可立即开始回血。</p>
+     */
+    public static final ForgeConfigSpec.IntValue CONTROLLED_MOB_HEAL_OUT_OF_COMBAT_DELAY_TICKS = BUILDER
+        .comment("Ticks a controlled mob must stay out of combat before auto-healing starts (100 ticks = 5 seconds)")
+        .defineInRange("controlled_mob_heal_out_of_combat_delay_ticks", 100, 0, Integer.MAX_VALUE);
 
-        BLACKLISTED_MOBS = BUILDER
-            .comment("List of mob that cannot be controlled")
-            .defineList(
-                "blacklisted_mobs", Arrays.asList(
-                    "minecraft:parrot",
-                    "minecraft:wolf",
-                    "minecraft:cat",
-                    "minecraft:ocelot",
-                    "minecraft:horse",
-                    "minecraft:donkey",
-                    "minecraft:mule",
-                    "minecraft:llama",
-                    "minecraft:trader_llama",
-                    "minecraft:skeleton_horse",
-                    "minecraft:zombie_horse",
-                    "minecraft:camel"
-                ), obj -> obj instanceof String
-            );
+    /**
+     * 判定为“高生命值生物”的生命值阈值。
+     */
+    public static final ForgeConfigSpec.IntValue HIGH_HEALTH_THRESHOLD = BUILDER
+        .comment("The life value threshold for being classified as a 'high-life-value organism'")
+        .defineInRange("controlled_mob_heal_out_of_combat_delay_ticks", 150, 1, Integer.MAX_VALUE);
 
-        STAY_WELDED_SPECIAL_AI_MOBS = BUILDER
-            .comment("Special AI mobs that should be coordinate-welded in STAY mode")
-            .defineList(
-                "stay_welded_special_ai_mobs", Arrays.asList(
-                    "minecraft:ghast",
-                    "minecraft:vex",
-                    "minecraft:blaze",
-                    "minecraft:phantom",
-                    "minecraft:bat"
-                ), obj -> obj instanceof String
-            );
+    /**
+     * 生物死亡后触发重生的延迟刻数（600 tick = 30 秒）。
+     */
+    public static final ForgeConfigSpec.IntValue RESPAWN_DELAY_TICKS = BUILDER
+        .comment("The number of ticks that elapse before rebirth is triggered after the organism dies (600 ticks = 30 seconds)")
+        .defineInRange("controlled_mob_heal_out_of_combat_delay_ticks", 600, 1, Integer.MAX_VALUE);
 
-        ALWAYS_SUCCESS = BUILDER
-            .comment("Whether to always succeed in controlling mobs")
-            .define("always_success", false);
-
-        BUILDER.pop();
-        SPEC = BUILDER.build();
-    }
+    /**
+     * 已构建完成的配置规格，在 {@link MobController} 构造器中通过
+     * {@link net.minecraftforge.fml.ModLoadingContext#registerConfig} 注册。
+     */
+    public static final ForgeConfigSpec SPEC = BUILDER.build();
 }

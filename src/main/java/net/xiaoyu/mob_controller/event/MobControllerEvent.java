@@ -43,6 +43,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
+import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
 import net.xiaoyu.mob_controller.network.ApplyControlCommandPacket;
@@ -56,6 +57,7 @@ import net.xiaoyu.mob_controller.util.MobControlledData;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 
 /**
  * 生物控制系统事件处理器。
@@ -65,8 +67,6 @@ import java.util.UUID;
 @Mod.EventBusSubscriber
 public class MobControllerEvent {
     private static final int HEAL_INTERVAL_TICKS = 2;
-    private static final int HEAL_OUT_OF_COMBAT_DELAY_TICKS = 100;
-
 
     /**
      * 为生物实体附加控制能力。
@@ -182,7 +182,7 @@ public class MobControllerEvent {
                     // 每2tick恢复1生命值[没有有效攻击目标且已脱战]
                     if (currentTime - lastHealTime >= HEAL_INTERVAL_TICKS
                         && !hasValidTarget
-                        && currentTime - cap.getLastCombatTime() >= HEAL_OUT_OF_COMBAT_DELAY_TICKS) {
+                        && currentTime - cap.getLastCombatTime() >= Config.CONTROLLED_MOB_HEAL_OUT_OF_COMBAT_DELAY_TICKS.get()) {
                         if (mob.getHealth() < mob.getMaxHealth()) {
                             mob.heal(1.0F);
                             cap.setLastHealTime(currentTime);
@@ -475,7 +475,7 @@ public class MobControllerEvent {
         return isValidCombatTarget(mob, mob.getTarget());
     }
 
-    private static boolean isValidCombatTarget(Mob mob, LivingEntity target) {
+    private static boolean isValidCombatTarget(Mob mob, @Nullable LivingEntity target) {
         return target != null
                && target.isAlive()
                && !target.isDeadOrDying()
@@ -483,7 +483,8 @@ public class MobControllerEvent {
                && target.distanceToSqr(mob) <= 64.0D * 64.0D;
     }
 
-    private static LivingEntity getResponsibleLivingEntity(Entity sourceEntity) {
+    @Nullable
+    private static LivingEntity getResponsibleLivingEntity(@Nullable Entity sourceEntity) {
         if (sourceEntity instanceof LivingEntity livingEntity) {
             return livingEntity;
         }
@@ -493,7 +494,8 @@ public class MobControllerEvent {
         return null;
     }
 
-    private static Mob getResponsibleMob(Entity sourceEntity) {
+    @Nullable
+    private static Mob getResponsibleMob(@Nullable Entity sourceEntity) {
         LivingEntity livingEntity = getResponsibleLivingEntity(sourceEntity);
         if (livingEntity instanceof Mob mob) {
             return mob;

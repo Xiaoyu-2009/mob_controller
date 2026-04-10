@@ -21,6 +21,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.common.util.LazyOptional;
+import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.capability.MobControlCapability;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
 import org.jetbrains.annotations.Nullable;
@@ -47,14 +48,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  */
 public class MobControlledData {
-    /**
-     * 判定为“高生命值生物”的生命值阈值。
-     */
-    public static final int HIGH_HEALTH_THRESHOLD = 150;
-    /**
-     * 生物死亡后触发重生的延迟刻数（600 tick = 30 秒）。
-     */
-    public static final int RESPAWN_DELAY_TICKS = 600;
     /**
      * 玩家 -> 已控制的高生命值生物类型集合。
      */
@@ -122,7 +115,7 @@ public class MobControlledData {
     }
 
     private static boolean isHighHealthMob(Mob mob) {
-        return mob.getMaxHealth() > HIGH_HEALTH_THRESHOLD;
+        return mob.getMaxHealth() > Config.HIGH_HEALTH_THRESHOLD.get();
     }
 
     /**
@@ -341,7 +334,7 @@ public class MobControlledData {
                 controllerUUID,
                 entityNbt,
                 capabilityNbt,
-                server.getTickCount() + RESPAWN_DELAY_TICKS,
+                server.getTickCount() + Config.RESPAWN_DELAY_TICKS.get(),
                 level.dimension(),
                 mob.blockPosition()
             )
