@@ -3,6 +3,7 @@ package net.xiaoyu.mob_controller.util;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.locale.Language;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
@@ -24,6 +25,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.mixin.AccessorSlimeMoveControl;
 
 import javax.annotation.Nullable;
@@ -32,6 +34,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class MobControlUtil {
+    private static final String STAY_WELD_TAG = "mob_controller:stay_weld";
+    private static final String STAY_WELD_X = "x";
+    private static final String STAY_WELD_Y = "y";
+    private static final String STAY_WELD_Z = "z";
+
     public static void handleMobFollowing(Mob mob) {
 
         if (MobControlledData.isControlledEntity(mob)) {
@@ -170,6 +177,38 @@ public class MobControlUtil {
         double dx = target.getX() - source.getX();
         double dz = target.getZ() - source.getZ();
         return (float) (Mth.atan2(dz, dx) * (180.0F / (float) Math.PI)) - 90.0F;
+    }
+
+    public static boolean shouldUseStayFlightWeld(Mob mob) {
+        String entityId = EntityType.getKey(mob.getType()).toString();
+        return Config.STAY_WELDED_SPECIAL_AI_MOBS.get().contains(entityId);
+    }
+
+    public static void applyStayFlightCoordinateWeld(Mob mob) {
+        if (mob.getVehicle() != null) {
+            return;
+        }
+
+        CompoundTag persistentData = mob.getPersistentData();
+        CompoundTag stayWeldData;
+        if (persistentData.contains(STAY_WELD_TAG, CompoundTag.TAG_COMPOUND)) {
+            stayWeldData = persistentData.getCompound(STAY_WELD_TAG);
+        } else {
+            stayWeldData = new CompoundTag();
+            stayWeldData.putDouble(STAY_WELD_X, mob.getX());
+            stayWeldData.putDouble(STAY_WELD_Y, mob.getY());
+            stayWeldData.putDouble(STAY_WELD_Z, mob.getZ());
+            persistentData.put(STAY_WELD_TAG, stayWeldData);
+        }
+
+        mob.setDeltaMovement(Vec3.ZERO);
+        mob.hasImpulse = true;
+        mob.fallDistance = 0;
+        mob.teleportTo(stayWeldData.getDouble(STAY_WELD_X), stayWeldData.getDouble(STAY_WELD_Y), stayWeldData.getDouble(STAY_WELD_Z));
+    }
+
+    public static void clearStayFlightCoordinateWeld(Mob mob) {
+        mob.getPersistentData().remove(STAY_WELD_TAG);
     }
 
     private static void teleportMob(Mob mob, BlockPos pos) {

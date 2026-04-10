@@ -10,6 +10,7 @@ public class Config {
     public static final ForgeConfigSpec SPEC;
 
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> BLACKLISTED_MOBS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> STAY_WELDED_SPECIAL_AI_MOBS;
     public static final ForgeConfigSpec.BooleanValue ALWAYS_SUCCESS;
 
     static {
@@ -30,6 +31,16 @@ public class Config {
                         "minecraft:skeleton_horse",
                         "minecraft:zombie_horse",
                         "minecraft:camel"
+                ), obj -> obj instanceof String);
+
+        STAY_WELDED_SPECIAL_AI_MOBS = BUILDER
+                .comment("Special AI mobs that should be coordinate-welded in STAY mode")
+                .defineList("stay_welded_special_ai_mobs", Arrays.asList(
+                        "minecraft:ghast",
+                        "minecraft:vex",
+                        "minecraft:blaze",
+                        "minecraft:phantom",
+                        "minecraft:bat"
                 ), obj -> obj instanceof String);
 
         ALWAYS_SUCCESS = BUILDER

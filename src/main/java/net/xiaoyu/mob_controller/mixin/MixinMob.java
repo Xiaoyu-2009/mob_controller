@@ -40,9 +40,20 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
             }
         }
 
-        if (MobControlledData.getControlMode(mob) == MobControlledData.ControlMode.FOLLOW) {
-            // 传送/跟随
-            MobControlUtil.handleMobFollowing(mob);
+        if (!mob.level().isClientSide) {
+            MobControlledData.ControlMode mode = MobControlledData.getControlMode(mob);
+
+            if (mode == MobControlledData.ControlMode.FOLLOW) {
+                // 传送/跟随
+                MobControlUtil.handleMobFollowing(mob);
+                MobControlUtil.clearStayFlightCoordinateWeld(mob);
+            } else if (mode == MobControlledData.ControlMode.STAY && MobControlledData.isControlledEntity(mob)
+                    && MobControlUtil.shouldUseStayFlightWeld(mob)) {
+                // 特殊 AI 生物停留时坐标焊死
+                MobControlUtil.applyStayFlightCoordinateWeld(mob);
+            } else {
+                MobControlUtil.clearStayFlightCoordinateWeld(mob);
+            }
         }
     }
 
