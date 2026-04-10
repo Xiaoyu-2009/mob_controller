@@ -94,14 +94,14 @@ public class Config {
      */
     public static final ForgeConfigSpec.IntValue HIGH_HEALTH_THRESHOLD = BUILDER
         .comment("The life value threshold for being classified as a 'high-life-value organism'")
-        .defineInRange("controlled_mob_heal_out_of_combat_delay_ticks", 150, 1, Integer.MAX_VALUE);
+        .defineInRange("high_health_threshold", 150, 1, Integer.MAX_VALUE);
 
     /**
      * 生物死亡后触发重生的延迟刻数（600 tick = 30 秒）。
      */
     public static final ForgeConfigSpec.IntValue RESPAWN_DELAY_TICKS = BUILDER
         .comment("The number of ticks that elapse before rebirth is triggered after the organism dies (600 ticks = 30 seconds)")
-        .defineInRange("controlled_mob_heal_out_of_combat_delay_ticks", 600, 1, Integer.MAX_VALUE);
+        .defineInRange("high_health_threshold", 600, 1, Integer.MAX_VALUE);
 
     /**
      * 已构建完成的配置规格，在 {@link MobController} 构造器中通过
