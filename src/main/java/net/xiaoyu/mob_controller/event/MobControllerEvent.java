@@ -39,6 +39,7 @@ import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
@@ -131,14 +132,18 @@ public class MobControllerEvent {
     /**
      * 受控生物死亡时安排延迟重生。
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLivingDeath(LivingDeathEvent event) {
+        if (event.isCanceled()) return;
         if (event.getEntity() instanceof Mob mob && mob.level() instanceof ServerLevel serverLevel
             && MobControlledData.isControlledEntity(mob)) {
             if (MobControlledData.scheduleRespawn(mob, serverLevel)) {
                 Player controller = MobControlledData.getController(mob, serverLevel);
                 if (controller instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.sendSystemMessage(Component.translatable("mob_controller.message.respawn_scheduled", mob.getDisplayName()));
+                    serverPlayer.sendSystemMessage(Component.translatable(
+                        "mob_controller.message.respawn_scheduled",
+                        mob.getDisplayName()
+                    ));
                 }
             }
         }
