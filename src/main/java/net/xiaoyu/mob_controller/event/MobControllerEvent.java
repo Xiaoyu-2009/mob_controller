@@ -145,7 +145,8 @@ public class MobControllerEvent {
                 if (controller instanceof ServerPlayer serverPlayer) {
                     serverPlayer.sendSystemMessage(Component.translatable(
                         "mob_controller.message.respawn_scheduled",
-                        mob.getDisplayName()
+                        mob.getDisplayName(),
+                        Config.RESPAWN_DELAY_TICKS.get() / 20
                     ));
                 }
             }
