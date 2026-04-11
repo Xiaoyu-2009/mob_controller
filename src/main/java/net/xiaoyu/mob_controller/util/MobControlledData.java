@@ -322,7 +322,7 @@ public class MobControlledData {
             boolean onlyMinSize = Config.SLIME_RESPAWN_ONLY_MIN_SIZE.get();
             int slimeSize = slime.getSize();
 
-            if (onlyMinSize ? slimeSize >= 3 : slimeSize <= 1) {
+            if (onlyMinSize ? slimeSize > 1 : slimeSize < 3) {
                 return false;
             }
         }
