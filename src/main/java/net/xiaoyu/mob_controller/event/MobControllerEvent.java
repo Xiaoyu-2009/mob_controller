@@ -169,20 +169,23 @@ public class MobControllerEvent {
     @SubscribeEvent
     public static void onLivingTickHeal(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Mob mob) {
+            if (mob.level().isClientSide) {
+                return;
+            }
 
             if (MobControlledData.isControlledEntity(mob)) {
                 mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
                     long currentTime = mob.level().getGameTime();
                     long lastHealTime = cap.getLastHealTime();
-                    boolean hasValidTarget = hasValidCombatTarget(mob);
+                    boolean inCombat = hasActiveCombatActivity(mob);
 
-                    if (hasValidTarget) {
+                    if (inCombat) {
                         cap.setLastCombatTime(currentTime);
                     }
 
                     // 每2tick恢复1生命值[没有有效攻击目标且已脱战]
                     if (currentTime - lastHealTime >= HEAL_INTERVAL_TICKS
-                        && !hasValidTarget
+                        && !inCombat
                         && currentTime - cap.getLastCombatTime() >= Config.CONTROLLED_MOB_HEAL_OUT_OF_COMBAT_DELAY_TICKS.get()) {
                         if (mob.getHealth() < mob.getMaxHealth()) {
                             mob.heal(1.0F);
@@ -474,6 +477,15 @@ public class MobControllerEvent {
         }
 
         return isValidCombatTarget(mob, mob.getTarget());
+    }
+
+    private static boolean hasActiveCombatActivity(Mob mob) {
+        if (hasValidCombatTarget(mob)) {
+            return true;
+        }
+
+        return isValidCombatTarget(mob, mob.getLastHurtByMob())
+               || isValidCombatTarget(mob, mob.getLastHurtMob());
     }
 
     private static boolean isValidCombatTarget(Mob mob, @Nullable LivingEntity target) {

@@ -104,6 +104,16 @@ public class Config {
         .defineInRange("respawn_delay_ticks", 600, 1, Integer.MAX_VALUE);
 
     /**
+     * 史莱姆/岩浆怪延迟重生体型策略。
+     *
+     * <p>设为 {@code true} 时，仅最小体型（size == 1）可进入延迟重生队列；
+     * 设为 {@code false} 时，仅非最小体型（size > 1）可进入延迟重生队列。</p>
+     */
+    public static final ForgeConfigSpec.BooleanValue SLIME_RESPAWN_ONLY_MIN_SIZE = BUILDER
+        .comment("If true, only smallest slimes/magma cubes (size == 1) can schedule respawn; if false, only non-smallest sizes (size > 1) can schedule respawn")
+        .define("slime_respawn_only_min_size", true);
+
+    /**
      * 已构建完成的配置规格，在 {@link MobController} 构造器中通过
      * {@link net.minecraftforge.fml.ModLoadingContext#registerConfig} 注册。
      */

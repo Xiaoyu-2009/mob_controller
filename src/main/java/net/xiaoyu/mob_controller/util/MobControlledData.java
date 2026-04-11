@@ -16,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -315,6 +316,15 @@ public class MobControlledData {
     public static boolean scheduleRespawn(Mob mob, ServerLevel level) {
         MinecraftServer server = level.getServer();
         ensurePendingRespawnsLoaded(server);
+
+        if (mob instanceof Slime slime) {
+            boolean onlyMinSize = Config.SLIME_RESPAWN_ONLY_MIN_SIZE.get();
+            int slimeSize = slime.getSize();
+
+            if (onlyMinSize ? slimeSize != 1 : slimeSize <= 1) {
+                return false;
+            }
+        }
 
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID == null || PENDING_RESPAWNS.containsKey(mob.getUUID())) {
