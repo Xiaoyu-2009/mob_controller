@@ -16,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.player.Player;
@@ -317,11 +318,11 @@ public class MobControlledData {
         MinecraftServer server = level.getServer();
         ensurePendingRespawnsLoaded(server);
 
-        if (mob instanceof Slime slime) {
+        if (mob instanceof Slime slime && !(mob instanceof MagmaCube)) {
             boolean onlyMinSize = Config.SLIME_RESPAWN_ONLY_MIN_SIZE.get();
             int slimeSize = slime.getSize();
 
-            if (onlyMinSize ? slimeSize != 1 : slimeSize <= 1) {
+            if (onlyMinSize ? slimeSize >= 3 : slimeSize <= 1) {
                 return false;
             }
         }
