@@ -6,7 +6,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
-import net.minecraft.world.entity.player.Player;
 import net.xiaoyu.mob_controller.MobController;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 import snownee.jade.api.EntityAccessor;
@@ -62,9 +61,9 @@ public class MobControllerProvider implements IEntityComponentProvider, IServerD
         }
 
         // 写入控制者名称
-        Player controller = MobControlledData.getController(mob, accessor.getLevel());
+        String controller = MobControlledData.getControllerName(mob, accessor.getLevel());
         if (controller != null) {
-            data.putString("MobControllerOwner", controller.getName().getString());
+            data.putString("MobControllerOwner", controller);
         }
     }
 

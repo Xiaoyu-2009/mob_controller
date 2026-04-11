@@ -1,5 +1,6 @@
 package net.xiaoyu.mob_controller.util;
 
+import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -12,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.GameProfileCache;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -248,7 +250,7 @@ public class MobControlledData {
      */
     @Nullable
     public static Player getController(LivingEntity mob, Level level) {
-        UUID controllerUUID = getControllerUUID(mob);
+        UUID controllerUUID = MobControlledData.getControllerUUID(mob);
         if (controllerUUID != null) {
             for (Player player : level.players()) {
                 if (player.getUUID().equals(controllerUUID)) {
@@ -258,6 +260,22 @@ public class MobControlledData {
         }
 
         return null;
+    }
+
+    public static @Nullable String getControllerName(LivingEntity mob, Level level) {
+        Player controller = MobControlledData.getController(mob, level);
+        if (controller != null) {
+            return controller.getName().getString();
+        }
+        MinecraftServer server = level.getServer();
+        UUID uuid = MobControlledData.getControllerUUID(mob);
+        if (server == null || uuid == null) return null;
+        GameProfileCache profileCache = server.getProfileCache();
+        if (profileCache == null) return null;
+        Optional<GameProfile> gameProfile = profileCache.get(uuid);
+        if (gameProfile.isEmpty()) return null;
+        GameProfile profile = gameProfile.get();
+        return profile.getName();
     }
 
     /**
