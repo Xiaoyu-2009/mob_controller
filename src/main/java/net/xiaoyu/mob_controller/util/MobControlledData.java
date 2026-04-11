@@ -318,7 +318,7 @@ public class MobControlledData {
         MinecraftServer server = level.getServer();
         ensurePendingRespawnsLoaded(server);
 
-        if (mob instanceof Slime slime && !(mob instanceof MagmaCube)) {
+        if (mob instanceof Slime slime) {
             boolean onlyMinSize = Config.SLIME_RESPAWN_ONLY_MIN_SIZE.get();
             int slimeSize = slime.getSize();
 
