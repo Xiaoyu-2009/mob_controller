@@ -126,7 +126,8 @@ public class MobControllerEvent {
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
         if (event.getEntity() instanceof Mob mob) {
 
-            if (MobControlledData.isControlledEntity(mob)) {
+            // 仅在实体真正死亡离场时移除高生命限制记录，避免跨维度/卸载导致限制失效。
+            if (MobControlledData.isControlledEntity(mob) && !mob.isAlive()) {
                 MobControlledData.removeControlledMobOnDeath(mob);
             }
         }
