@@ -8,11 +8,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -50,7 +46,7 @@ public class MobControllerItem extends Item {
      * 控制令生效后给予发光效果的持续时长。
      */
     private static final int GLOWING_DURATION_TICKS = 100;
-
+    
     static {
         ENTITY_TYPE_FUNCTION_MAP.put(
             EntityType.PILLAGER, oldEntity ->
@@ -61,7 +57,7 @@ public class MobControllerItem extends Item {
                 newMob(oldEntity, ModEntities.CONTROLLED_WITCH.get(), EntityControlledWitch::new)
         );
     }
-
+    
     /**
      * 构造生物控制器物品。
      *
@@ -70,7 +66,7 @@ public class MobControllerItem extends Item {
     public MobControllerItem(Properties properties) {
         super(properties);
     }
-
+    
     /**
      * 对玩家周围所有受其控制的生物批量应用控制模式。
      *
@@ -82,23 +78,23 @@ public class MobControllerItem extends Item {
         if (player.level().isClientSide) {
             return 0;
         }
-
+        
         AABB area = player.getBoundingBox().inflate(CONTROL_COMMAND_RANGE);
         List<Mob> controlledMobs = player.level().getEntitiesOfClass(
             Mob.class, area, mob ->
                 MobControlledData.isControlledEntity(mob) && player.getUUID().equals(MobControlledData.getControllerUUID(mob))
         );
-
+        
         for (Mob mob : controlledMobs) {
             MobControlledData.setControlMode(mob, mode);
             mob.setTarget(null);
             MobControlledData.clearSystemAttack(mob);
             mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, GLOWING_DURATION_TICKS));
         }
-
+        
         return controlledMobs.size();
     }
-
+    
     /**
      * 使用旧实体 NBT 创建新实体实例，并尽量保持位置和朝向。
      *
@@ -114,28 +110,28 @@ public class MobControllerItem extends Item {
         BiFunction<EntityType<T>, ServerLevel, Mob> newMobFunction
     ) {
         CompoundTag nbt = oldEntity.saveWithoutId(new CompoundTag());
-
+        
         double x = oldEntity.getX();
         double y = oldEntity.getY();
         double z = oldEntity.getZ();
         float yRot = oldEntity.getYRot();
         float xRot = oldEntity.getXRot();
-
+        
         ServerLevel serverLevel = (ServerLevel) oldEntity.level();
-
+        
         oldEntity.remove(Entity.RemovalReason.DISCARDED);
-
+        
         Mob newMob = newMobFunction.apply(entityType, serverLevel);
-
+        
         newMob.load(nbt);
-
+        
         newMob.setPos(x, y, z);
         newMob.setYRot(yRot);
         newMob.setXRot(xRot);
-
+        
         return newMob;
     }
-
+    
     /**
      * 玩家对生物右键时尝试执行控制。
      *
@@ -149,38 +145,38 @@ public class MobControllerItem extends Item {
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (target instanceof Mob mob) {
             Level level = player.level();
-
+            
             if (!level.isClientSide) {
                 if (MobControlledData.isControlledEntity(mob)) {
                     return InteractionResult.PASS;
                 }
-
+                
                 if (!Config.ALWAYS_SUCCESS.get() && mob.getHealth() > 10.0F) {
                     spawnParticles(mob, false);
                     return InteractionResult.FAIL;
                 }
-
+                
                 if (MobControlledData.hasPlayerControlledSameHighHealthMob(player.getUUID(), mob)) {
                     /*MobControlUtil.showMessageToPlayer(
                         player, null, "mob_controller.error.same_high_health_mob",
                         new Object[]{ MobControlledData.HIGH_HEALTH_THRESHOLD }, ChatFormatting.RED
                     );*/
-
+                    
                     spawnParticles(mob, false);
                     return InteractionResult.FAIL;
                 }
-
+                
                 if (Config.BLACKLISTED_MOBS.get().contains(EntityType.getKey(mob.getType()).toString()) || hasOwnerOrTameTag(mob)) {
                     spawnParticles(mob, false);
                     return InteractionResult.FAIL;
                 }
-
+                
                 float controlChance = 1.0f;
-
+                
                 if (!Config.ALWAYS_SUCCESS.get()) {
                     controlChance = calculateControlChance(mob);
                 }
-
+                
                 if (level.random.nextFloat() <= controlChance) {
                     mob.setTarget(null);
                     // 控制成功
@@ -197,7 +193,7 @@ public class MobControllerItem extends Item {
         }
         return InteractionResult.PASS;
     }
-
+    
     /**
      * 检查生物是否属于已驯服或已有主人的实体。
      *
@@ -210,7 +206,7 @@ public class MobControllerItem extends Item {
                 return true;
             }
         }
-
+        
         CompoundTag nbt = mob.saveWithoutId(new CompoundTag());
         if (nbt.contains("Owner") || nbt.contains("OwnerUUID")) {
             return true;
@@ -220,7 +216,7 @@ public class MobControllerItem extends Item {
         }
         return mob instanceof TamableAnimal;
     }
-
+    
     /**
      * 根据生物最大生命值计算控制成功率。
      *
@@ -233,9 +229,9 @@ public class MobControllerItem extends Item {
                 return 0.0f;
             }
         }
-
+        
         float maxHealth = mob.getMaxHealth();
-
+        
         if (maxHealth < 10) {
             return 1.0f;
         } else if (maxHealth <= 50) {
@@ -248,7 +244,7 @@ public class MobControllerItem extends Item {
             return Math.max(chance, 0.2f);
         }
     }
-
+    
     /**
      * 将目标生物标记为被指定玩家控制，并清理附近受控生物仇恨。
      *
@@ -261,6 +257,12 @@ public class MobControllerItem extends Item {
         if (!mob.level().isClientSide && mob.level() instanceof ServerLevel serverLevel) {
             for (Entity entity : mob.level().getEntitiesOfClass(Entity.class, mob.getBoundingBox().inflate(32.0))) {
                 if (entity instanceof Mob oldMob && MobControlledData.isControlledEntity(oldMob)) {
+                    if (oldMob.getTarget() != null && oldMob.getTarget().is(mob)) {
+                        oldMob.setTarget(null);
+                    }
+                    if (mob.getTarget() != null && mob.getTarget().is(oldMob)) {
+                        mob.setTarget(null);
+                    }
                     AtomicReference<Mob> atomicNewMob = new AtomicReference<>();
                     ENTITY_TYPE_FUNCTION_MAP.forEach((entityType, entityFunction) -> {
                         if (oldMob.getType().equals(entityType)) {
@@ -280,7 +282,7 @@ public class MobControllerItem extends Item {
             }
         }
     }
-
+    
     /**
      * 在服务端生成控制成功/失败粒子效果。
      *
@@ -289,11 +291,11 @@ public class MobControllerItem extends Item {
      */
     private void spawnParticles(Mob mob, boolean success) {
         Level level = mob.level();
-
+        
         if (level.isClientSide) {
             return;
         }
-
+        
         // 控制成功
         if (success) {
             ((ServerLevel) level).sendParticles(

@@ -36,12 +36,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -68,7 +63,7 @@ public class MobControlledData {
     private static final String PENDING_RESPAWN_FILE = "pending_respawns.dat";
     @Nullable
     private static Path loadedPendingRespawnFile;
-
+    
     /**
      * 将生物加入控制状态，并初始化为“跟随”模式。
      *
@@ -84,16 +79,16 @@ public class MobControlledData {
             cap.setLastCombatTime(0L);
             cap.setSystemAttack(false);
         });
-
+        
         // 不会自己消失//捡起物品
         mob.setPersistenceRequired();
         if (!(mob instanceof Piglin)) {
             mob.setCanPickUpLoot(false);
         }
-
+        
         addHighHealthRecord(controllerUUID, mob);
     }
-
+    
     /**
      * 释放对生物的控制并清理相关标记。
      *
@@ -105,7 +100,7 @@ public class MobControlledData {
         if (controllerUUID == null) {
             return false;
         }
-
+        
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> {
             cap.setControllerUUID(null);
@@ -114,15 +109,15 @@ public class MobControlledData {
             cap.setLastCombatTime(0L);
             cap.setSystemAttack(false);
         });
-
+        
         removeHighHealthRecord(controllerUUID, mob);
         return capability.isPresent();
     }
-
+    
     private static boolean isHighHealthMob(Mob mob) {
         return mob.getMaxHealth() > Config.HIGH_HEALTH_THRESHOLD.get();
     }
-
+    
     /**
      * 判断玩家是否已经控制过同类型的高生命值生物。
      *
@@ -134,14 +129,14 @@ public class MobControlledData {
         if (!isHighHealthMob(mob)) {
             return false;
         }
-
+        
         if (getControlledHighHealthCount(playerUUID, mob.getType()) > 0) {
             return true;
         }
-
+        
         return hasPendingHighHealthRespawn(playerUUID, mob.getType());
     }
-
+    
     /**
      * 在被控制生物死亡时移除高生命值控制记录。
      *
@@ -153,12 +148,12 @@ public class MobControlledData {
             removeHighHealthRecord(controllerUUID, mob);
         }
     }
-
+    
     private static void removeHighHealthRecord(UUID controllerUUID, Mob mob) {
         if (!isHighHealthMob(mob)) {
             return;
         }
-
+        
         Map<EntityType<?>, Integer> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(controllerUUID);
         if (controlledMobs != null) {
             EntityType<?> mobType = mob.getType();
@@ -166,28 +161,28 @@ public class MobControlledData {
             if (currentCount == null) {
                 return;
             }
-
+            
             if (currentCount <= 1) {
                 controlledMobs.remove(mobType);
             } else {
                 controlledMobs.put(mobType, currentCount - 1);
             }
-
+            
             if (controlledMobs.isEmpty()) {
                 PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.remove(controllerUUID);
             }
         }
     }
-
+    
     private static void addHighHealthRecord(UUID controllerUUID, Mob mob) {
         if (!isHighHealthMob(mob)) {
             return;
         }
-
+        
         PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.computeIfAbsent(controllerUUID, key -> new HashMap<>())
             .merge(mob.getType(), 1, Integer::sum);
     }
-
+    
     private static int getControlledHighHealthCount(UUID controllerUUID, EntityType<?> mobType) {
         Map<EntityType<?>, Integer> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(controllerUUID);
         if (controlledMobs == null) {
@@ -195,13 +190,13 @@ public class MobControlledData {
         }
         return Math.max(0, controlledMobs.getOrDefault(mobType, 0));
     }
-
+    
     private static boolean hasPendingHighHealthRespawn(UUID controllerUUID, EntityType<?> mobType) {
         for (PendingRespawnData data : PENDING_RESPAWNS.values()) {
             if (!data.controllerUUID().equals(controllerUUID) || !data.highHealthMob()) {
                 continue;
             }
-
+            
             Optional<EntityType<?>> pendingType = getPendingMobType(data.mobTypeId());
             if (pendingType.isPresent() && pendingType.get().equals(mobType)) {
                 return true;
@@ -209,7 +204,7 @@ public class MobControlledData {
         }
         return false;
     }
-
+    
     private static Optional<EntityType<?>> getPendingMobType(String typeId) {
         ResourceLocation location = ResourceLocation.tryParse(typeId);
         if (location == null) {
@@ -217,9 +212,9 @@ public class MobControlledData {
         }
         return Optional.ofNullable(ForgeRegistries.ENTITY_TYPES.getValue(location));
     }
-
+    
     // 列表中移除[被控制的生物死亡]
-
+    
     /**
      * 判断生物是否处于被控制状态。
      *
@@ -230,7 +225,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isControlled).orElse(false);
     }
-
+    
     /**
      * 获取生物的控制者 UUID。
      *
@@ -241,7 +236,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::getControllerUUID).orElse(null);
     }
-
+    
     /**
      * 在给定维度内查找生物对应的控制者玩家对象。
      *
@@ -259,10 +254,10 @@ public class MobControlledData {
                 }
             }
         }
-
+        
         return null;
     }
-
+    
     public static @Nullable String getControllerName(LivingEntity mob, Level level) {
         Player controller = MobControlledData.getController(mob, level);
         if (controller != null) {
@@ -270,15 +265,21 @@ public class MobControlledData {
         }
         MinecraftServer server = level.getServer();
         UUID uuid = MobControlledData.getControllerUUID(mob);
-        if (server == null || uuid == null) return null;
+        if (server == null || uuid == null) {
+            return null;
+        }
         GameProfileCache profileCache = server.getProfileCache();
-        if (profileCache == null) return null;
+        if (profileCache == null) {
+            return null;
+        }
         Optional<GameProfile> gameProfile = profileCache.get(uuid);
-        if (gameProfile.isEmpty()) return null;
+        if (gameProfile.isEmpty()) {
+            return null;
+        }
         GameProfile profile = gameProfile.get();
         return profile.getName();
     }
-
+    
     /**
      * 设置生物的控制模式。
      *
@@ -290,9 +291,10 @@ public class MobControlledData {
         capability.ifPresent(cap -> cap.setControlMode(mode));
         if (mode == ControlMode.STAY) {
             mob.getNavigation().stop();
+            mob.getNavigation().createPath(mob.blockPosition(), 10);
         }
     }
-
+    
     /**
      * 获取生物最近一次交战时间。
      *
@@ -303,7 +305,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::getLastCombatTime).orElse(0L);
     }
-
+    
     /**
      * 记录生物最近一次交战时间。
      *
@@ -314,7 +316,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setLastCombatTime(time));
     }
-
+    
     /**
      * 以当前世界时间记录一次交战。
      *
@@ -323,7 +325,7 @@ public class MobControlledData {
     public static void markCombat(Mob mob) {
         setLastCombatTime(mob, mob.level().getGameTime());
     }
-
+    
     /**
      * 获取生物当前控制模式。
      *
@@ -334,7 +336,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::getControlMode).orElse(ControlMode.FOLLOW);
     }
-
+    
     /**
      * 按顺序循环切换控制模式（跟随 -> 停留 -> 游荡 -> 跟随）。
      *
@@ -348,7 +350,7 @@ public class MobControlledData {
         setControlMode(mob, newMode);
         return newMode;
     }
-
+    
     /**
      * 标记该生物当前攻击为系统触发。
      *
@@ -358,7 +360,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setSystemAttack(true));
     }
-
+    
     /**
      * 清除系统攻击标记。
      *
@@ -368,7 +370,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> cap.setSystemAttack(false));
     }
-
+    
     /**
      * 查询系统攻击标记。
      *
@@ -379,7 +381,7 @@ public class MobControlledData {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         return capability.map(MobControlCapability::isSystemAttack).orElse(false);
     }
-
+    
     /**
      * 为死亡生物创建延迟重生任务。
      *
@@ -392,31 +394,31 @@ public class MobControlledData {
     public static boolean scheduleRespawn(Mob mob, ServerLevel level) {
         MinecraftServer server = level.getServer();
         ensurePendingRespawnsLoaded(server);
-
+        
         if (mob instanceof Slime slime && !(mob instanceof MagmaCube)) {
             boolean onlyMinSize = Config.SLIME_RESPAWN_ONLY_MIN_SIZE.get();
             int slimeSize = slime.getSize();
-
+            
             if (onlyMinSize ? slimeSize > 1 : slimeSize < 3) {
                 return false;
             }
         }
-
+        
         UUID controllerUUID = getControllerUUID(mob);
         if (controllerUUID == null || PENDING_RESPAWNS.containsKey(mob.getUUID())) {
             return false;
         }
-
+        
         CompoundTag entityNbt = mob.saveWithoutId(new CompoundTag());
         entityNbt.putString("id", EntityType.getKey(mob.getType()).toString());
-
+        
         CompoundTag capabilityNbt = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
             .map(MobControlCapability::serializeNBT)
             .orElse(new CompoundTag());
-
+        
         String mobTypeId = EntityType.getKey(mob.getType()).toString();
         boolean highHealthMob = isHighHealthMob(mob);
-
+        
         PENDING_RESPAWNS.put(
             mob.getUUID(), new PendingRespawnData(
                 mob.getUUID(),
@@ -433,7 +435,7 @@ public class MobControlledData {
         savePendingRespawns(server);
         return true;
     }
-
+    
     /**
      * 每刻处理待重生队列，时间到达后尝试生成并恢复生物状态。
      *
@@ -443,20 +445,20 @@ public class MobControlledData {
         ensurePendingRespawnsLoaded(server);
         int currentTick = server.getTickCount();
         Set<UUID> completedRespawns = new HashSet<>();
-
+        
         for (Map.Entry<UUID, PendingRespawnData> entry : PENDING_RESPAWNS.entrySet()) {
             PendingRespawnData data = entry.getValue();
             if (data.triggerTick() > currentTick) {
                 continue;
             }
-
+            
             ServerPlayer controller = server.getPlayerList().getPlayer(data.controllerUUID());
             ServerLevel targetLevel = controller != null ? controller.serverLevel() : server.getLevel(data.deathDimension());
-
+            
             if (targetLevel == null) {
                 continue;
             }
-
+            
             CompoundTag nbt = data.entityNbt().copy();
             Optional<Entity> createdEntity = EntityType.create(nbt, targetLevel);
             if (createdEntity.isPresent() && createdEntity.get() instanceof Mob respawnedMob) {
@@ -474,25 +476,25 @@ public class MobControlledData {
                         respawnedMob.getYRot(), respawnedMob.getXRot()
                     );
                 }
-
+                
                 respawnedMob.setDeltaMovement(0, 0, 0);
                 respawnedMob.setHealth(respawnedMob.getMaxHealth());
                 respawnedMob.setTarget(null);
                 targetLevel.addFreshEntity(respawnedMob);
-
+                
                 addControlledMob(data.controllerUUID(), respawnedMob);
                 respawnedMob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
                     .ifPresent(cap -> cap.deserializeNBT(data.capabilityNbt().copy()));
                 clearSystemAttack(respawnedMob);
-
+                
                 if (controller != null) {
                     controller.sendSystemMessage(Component.translatable("mob_controller.message.respawned", respawnedMob.getDisplayName()));
                 }
             }
-
+            
             completedRespawns.add(entry.getKey());
         }
-
+        
         if (!completedRespawns.isEmpty()) {
             for (UUID deadMobUUID : completedRespawns) {
                 PENDING_RESPAWNS.remove(deadMobUUID);
@@ -500,7 +502,7 @@ public class MobControlledData {
             savePendingRespawns(server);
         }
     }
-
+    
     private static void ensurePendingRespawnsLoaded(MinecraftServer server) {
         Path filePath = getPendingRespawnFilePath(server);
         if (!filePath.equals(loadedPendingRespawnFile)) {
@@ -508,38 +510,38 @@ public class MobControlledData {
             loadedPendingRespawnFile = filePath;
         }
     }
-
+    
     private static Path getPendingRespawnFilePath(MinecraftServer server) {
         return server.getWorldPath(LevelResource.ROOT)
             .resolve("data")
             .resolve(PENDING_RESPAWN_DATA_DIR)
             .resolve(PENDING_RESPAWN_FILE);
     }
-
+    
     private static void loadPendingRespawns(MinecraftServer server, Path filePath) {
         PENDING_RESPAWNS.clear();
         if (!Files.exists(filePath)) {
             return;
         }
-
+        
         try (InputStream inputStream = Files.newInputStream(filePath)) {
             CompoundTag rootTag = NbtIo.readCompressed(inputStream);
-            if (rootTag == null || !rootTag.contains(PENDING_RESPAWN_TAG, Tag.TAG_LIST)) {
+            if (!rootTag.contains(PENDING_RESPAWN_TAG, Tag.TAG_LIST)) {
                 return;
             }
-
+            
             ListTag pendingList = rootTag.getList(PENDING_RESPAWN_TAG, Tag.TAG_COMPOUND);
             for (int i = 0; i < pendingList.size(); i++) {
                 CompoundTag respawnTag = pendingList.getCompound(i);
                 if (!respawnTag.hasUUID("deadMobUUID") || !respawnTag.hasUUID("controllerUUID")) {
                     continue;
                 }
-
+                
                 ResourceLocation dimensionLocation = ResourceLocation.tryParse(respawnTag.getString("deathDimension"));
                 if (dimensionLocation == null) {
                     continue;
                 }
-
+                
                 UUID deadMobUUID = respawnTag.getUUID("deadMobUUID");
                 UUID controllerUUID = respawnTag.getUUID("controllerUUID");
                 CompoundTag entityNbt = respawnTag.getCompound("entityNbt");
@@ -547,7 +549,7 @@ public class MobControlledData {
                 int remainingTicks = Math.max(0, respawnTag.getInt("remainingTicks"));
                 ResourceKey<Level> deathDimension = ResourceKey.create(Registries.DIMENSION, dimensionLocation);
                 BlockPos deathPos = BlockPos.of(respawnTag.getLong("deathPos"));
-
+                
                 PENDING_RESPAWNS.put(
                     deadMobUUID,
                     new PendingRespawnData(
@@ -566,16 +568,16 @@ public class MobControlledData {
         } catch (IOException ignored) {
         }
     }
-
+    
     private static void savePendingRespawns(MinecraftServer server) {
         Path filePath = getPendingRespawnFilePath(server);
         try {
             Files.createDirectories(filePath.getParent());
-
+            
             CompoundTag rootTag = new CompoundTag();
             ListTag pendingList = new ListTag();
             int currentTick = server.getTickCount();
-
+            
             for (PendingRespawnData data : PENDING_RESPAWNS.values()) {
                 CompoundTag respawnTag = new CompoundTag();
                 respawnTag.putUUID("deadMobUUID", data.deadMobUUID());
@@ -589,16 +591,16 @@ public class MobControlledData {
                 respawnTag.putBoolean("highHealthMob", data.highHealthMob());
                 pendingList.add(respawnTag);
             }
-
+            
             rootTag.put(PENDING_RESPAWN_TAG, pendingList);
-
+            
             try (OutputStream outputStream = Files.newOutputStream(filePath)) {
                 NbtIo.writeCompressed(rootTag, outputStream);
             }
         } catch (IOException ignored) {
         }
     }
-
+    
     /**
      * 控制模式。
      */
@@ -616,7 +618,7 @@ public class MobControlledData {
          */
         WANDER,
     }
-
+    
     private record PendingRespawnData(
         UUID deadMobUUID, UUID controllerUUID, CompoundTag entityNbt,
         CompoundTag capabilityNbt, int triggerTick,

@@ -219,7 +219,7 @@ dependencies {
     modImplementation("dev.latvian.mods:kubejs-forge:${kubejs_version}")
 
     // 怪物大乱斗
-    modImplementation("io.github.flemmli97:mobbattle:${minecraft_version}-2.5.3-${mod_loader}")
+//    modImplementation("io.github.flemmli97:mobbattle:${minecraft_version}-2.5.3-${mod_loader}")
 
 
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.5.0"))
@@ -227,7 +227,7 @@ dependencies {
 
     implementation "org.jetbrains:annotations:17.0.0"
 
-    modRuntimeOnly("curse.maven:curtain-845348:4704521")
+//    modRuntimeOnly("curse.maven:curtain-845348:4704521")
 }
 
 mixin {

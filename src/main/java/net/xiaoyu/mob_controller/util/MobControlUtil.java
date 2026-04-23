@@ -11,27 +11,11 @@ import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobType;
-import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ambient.Bat;
-import net.minecraft.world.entity.animal.Cow;
-import net.minecraft.world.entity.animal.Dolphin;
-import net.minecraft.world.entity.animal.Sheep;
-import net.minecraft.world.entity.animal.Squid;
-import net.minecraft.world.entity.monster.Blaze;
-import net.minecraft.world.entity.monster.Ghast;
-import net.minecraft.world.entity.monster.Guardian;
-import net.minecraft.world.entity.monster.Phantom;
-import net.minecraft.world.entity.monster.Ravager;
-import net.minecraft.world.entity.monster.Vex;
-import net.minecraft.world.entity.monster.Zoglin;
-import net.minecraft.world.entity.animal.Panda;
-import net.minecraft.world.entity.animal.PolarBear;
+import net.minecraft.world.entity.animal.*;
 import net.minecraft.world.entity.animal.goat.Goat;
+import net.minecraft.world.entity.monster.*;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
 import net.minecraft.world.entity.monster.warden.AngerLevel;
 import net.minecraft.world.entity.monster.warden.Warden;
@@ -43,10 +27,10 @@ import net.minecraft.world.phys.Vec3;
 import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.mixin.AccessorSlimeMoveControl;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.Objects;
 import java.util.UUID;
-import javax.annotation.Nullable;
 
 /**
  * 生物控制系统的通用工具类。
@@ -63,15 +47,16 @@ public class MobControlUtil {
     private static final String STAY_WELD_X = "x";
     private static final String STAY_WELD_Y = "y";
     private static final String STAY_WELD_Z = "z";
+    
     /**
      * 判断生物是否为两栖动物（海龟或青蛙）。
      * 两栖动物在传送时会根据控制者的位置智能选择水中或陆地传送点。
      */
     private static boolean isAmphibian(Mob mob) {
-        return mob.getType() == net.minecraft.world.entity.EntityType.TURTLE
-                || mob.getType() == net.minecraft.world.entity.EntityType.FROG;
+        return mob.getType().equals(EntityType.TURTLE)
+            || mob.getType().equals(EntityType.FROG);
     }
-
+    
     /**
      * 在每刻中处理被控制生物的跟随逻辑。
      *
@@ -80,13 +65,13 @@ public class MobControlUtil {
      * @param mob 被控制生物
      */
     public static void handleMobFollowing(Mob mob) {
-
+        
         if (MobControlledData.isControlledEntity(mob)) {
             Player controller = MobControlledData.getController(mob, mob.level());
-
+            
             if (controller != null && !controller.isSpectator()) {
                 double distanceSq = controller.distanceToSqr(mob);
-
+                
                 // 跟随
                 if (distanceSq > 64.0D) { // 8格距离
                     if (mob instanceof Ghast || mob instanceof Vex || mob instanceof Blaze) {
@@ -99,14 +84,14 @@ public class MobControlUtil {
                     } */ else if (mob instanceof Phantom phantom) {
                         // 幻翼
                         phantom.setTarget(controller);
-
+                        
                         try {
                             Field attackPhaseField = Phantom.class.getDeclaredField("attackPhase");
                             attackPhaseField.setAccessible(true);
-
+                            
                             Class<?> attackPhaseClass = Class.forName("net.minecraft.world.entity.monster.Phantom$AttackPhase");
                             Object[] attackPhaseConstants = attackPhaseClass.getEnumConstants();
-
+                            
                             for (Object constant : attackPhaseConstants) {
                                 if ("SWOOP".equals(constant.toString())) {
                                     attackPhaseField.set(phantom, constant);
@@ -115,11 +100,11 @@ public class MobControlUtil {
                             }
                         } catch (Exception ignored) {
                         }
-
+                        
                         try {
                             Field moveTargetPointField = Phantom.class.getDeclaredField("moveTargetPoint");
                             moveTargetPointField.setAccessible(true);
-
+                            
                             moveTargetPointField.set(phantom, new Vec3(controller.getX(), controller.getY() + 1.0D, controller.getZ()));
                         } catch (Exception ignored) {
                         }
@@ -130,7 +115,7 @@ public class MobControlUtil {
                             controller.getY() - mob.getY(),
                             controller.getZ() - mob.getZ()
                         ).normalize();
-
+                        
                         squid.setMovementVector(
                             (float) (direction.x * 0.2F),
                             (float) (direction.y * 0.2F),
@@ -138,15 +123,15 @@ public class MobControlUtil {
                         );
                     } else if (mob instanceof Bat bat) {
                         // 蝙蝠
-
+                        
                         if (bat.isResting()) {
                             bat.setResting(false);
                         }
-
+                        
                         try {
                             Field targetPositionField = Bat.class.getDeclaredField("targetPosition");
                             targetPositionField.setAccessible(true);
-
+                            
                             targetPositionField.set(
                                 bat, new BlockPos(
                                     (int) controller.getX(),
@@ -173,12 +158,12 @@ public class MobControlUtil {
                             slimeMoveControl.mob_controller$setDirection(getYawTowards(mob, controller), true);
                         }
                     }
-
+                    
                     // 传送
 // 传送
                     if (distanceSq > 196.0D && mob.getVehicle() == null) {
                         BlockPos controllerPos = controller.blockPosition();
-
+                        
                         // 是否要传送到水中：原逻辑根据生物的水生类型判定，两栖动物根据控制者是否在水中动态判定
                         boolean needsWaterTeleport;
                         if (isAmphibian(mob)) {
@@ -187,7 +172,7 @@ public class MobControlUtil {
                         } else {
                             needsWaterTeleport = mob.getMobType().equals(MobType.WATER);
                         }
-
+                        
                         if (needsWaterTeleport) {
                             // 控制者是否在水中
                             if (isControllerFullySubmerged(controller)) {
@@ -207,7 +192,7 @@ public class MobControlUtil {
                                     break;
                                 }
                             }
-
+                            
                             if (nonFluidBlockFound) {
                                 BlockPos safePos = findSafePosition(mob, controller, false);
                                 if (safePos != null) {
@@ -220,13 +205,13 @@ public class MobControlUtil {
             }
         }
     }
-
+    
     private static float getYawTowards(Entity source, Entity target) {
         double dx = target.getX() - source.getX();
         double dz = target.getZ() - source.getZ();
         return (float) (Mth.atan2(dz, dx) * (180.0F / (float) Math.PI)) - 90.0F;
     }
-
+    
     /**
      * 判断当前生物在“停留”模式下是否需要应用飞行坐标焊死。
      *
@@ -237,24 +222,24 @@ public class MobControlUtil {
         String entityId = EntityType.getKey(mob.getType()).toString();
         return Config.STAY_WELDED_SPECIAL_AI_MOBS.get().contains(entityId);
     }
-
+    
     /**
      * 判断受控生物是否属于当前支持直接骑乘的类型。
      */
     public static boolean isDirectRideableControlledMob(Mob mob) {
         return mob instanceof Guardian
-               || mob instanceof Hoglin
-               || mob instanceof Zoglin
-               || mob instanceof Ravager
-               || mob instanceof Cow
-               || mob instanceof Sheep
-               || mob instanceof Dolphin
-               || mob instanceof Panda
-               || mob instanceof PolarBear
-               || mob instanceof Goat
-               || mob.getType() == EntityType.SNIFFER;
+            || mob instanceof Hoglin
+            || mob instanceof Zoglin
+            || mob instanceof Ravager
+            || mob instanceof Cow
+            || mob instanceof Sheep
+            || mob instanceof Dolphin
+            || mob instanceof Panda
+            || mob instanceof PolarBear
+            || mob instanceof Goat
+            || mob.getType().equals(EntityType.SNIFFER);
     }
-
+    
     /**
      * 对飞行/特殊 AI 生物应用停留坐标焊死。
      *
@@ -266,7 +251,7 @@ public class MobControlUtil {
         if (mob.getVehicle() != null) {
             return;
         }
-
+        
         CompoundTag persistentData = mob.getPersistentData();
         CompoundTag stayWeldData;
         if (persistentData.contains(STAY_WELD_TAG, CompoundTag.TAG_COMPOUND)) {
@@ -278,13 +263,13 @@ public class MobControlUtil {
             stayWeldData.putDouble(STAY_WELD_Z, mob.getZ());
             persistentData.put(STAY_WELD_TAG, stayWeldData);
         }
-
+        
         mob.setDeltaMovement(Vec3.ZERO);
         mob.hasImpulse = true;
         mob.fallDistance = 0;
         mob.teleportTo(stayWeldData.getDouble(STAY_WELD_X), stayWeldData.getDouble(STAY_WELD_Y), stayWeldData.getDouble(STAY_WELD_Z));
     }
-
+    
     /**
      * 清除生物的停留坐标焊死数据。
      *
@@ -293,30 +278,31 @@ public class MobControlUtil {
     public static void clearStayFlightCoordinateWeld(Mob mob) {
         mob.getPersistentData().remove(STAY_WELD_TAG);
     }
-
+    
     private static void teleportMob(Mob mob, BlockPos pos) {
         mob.teleportTo(pos.getX(), pos.getY(), pos.getZ());
         mob.getNavigation().stop();
+        mob.getNavigation().createPath(mob.blockPosition(), 10);
     }
-
+    
     private static boolean isControllerFullySubmerged(Player controller) {
         // 控制者头部/身体是否完全在水中
         return controller.isInWater() &&
-               controller.level().getFluidState(controller.blockPosition()).getType().equals(Fluids.WATER) &&
-               controller.level().getFluidState(controller.blockPosition().above()).getType().equals(Fluids.WATER);
+            controller.level().getFluidState(controller.blockPosition()).getType().equals(Fluids.WATER) &&
+            controller.level().getFluidState(controller.blockPosition().above()).getType().equals(Fluids.WATER);
     }
-
+    
     @Nullable
     private static BlockPos findSafePosition(Mob mob, Player controller, boolean isWater) {
         AABB mobAABB = mob.getBoundingBox();
         BlockPos controllerPos = controller.blockPosition();
-
+        
         // 7x7x7范围内
         for (int x = -3; x <= 3; x++) {
             for (int y = -3; y <= 3; y++) {
                 for (int z = -3; z <= 3; z++) {
                     BlockPos checkPos = controllerPos.offset(x, y, z);
-
+                    
                     if (isWater) {
                         // 是否是水
                         if (mob.level().getFluidState(checkPos).getType().equals(Fluids.WATER)) {
@@ -328,7 +314,7 @@ public class MobControlUtil {
                                     checkPos.getY() - mobAABB.minY,
                                     checkPos.getZ() - mobAABB.minZ
                                 );
-
+                                
                                 if (mob.level().noCollision(mob, targetAABB)) {
                                     return checkPos;
                                 }
@@ -340,14 +326,14 @@ public class MobControlUtil {
                             // 下方是否有可站立的方块
                             BlockPos groundPos = checkPos.below();
                             BlockState groundState = mob.level().getBlockState(groundPos);
-
+                            
                             if (groundState.isFaceSturdy(mob.level(), groundPos, Direction.UP)) {
                                 AABB targetAABB = mobAABB.move(
                                     checkPos.getX() - mobAABB.minX,
                                     checkPos.getY() - mobAABB.minY,
                                     checkPos.getZ() - mobAABB.minZ
                                 );
-
+                                
                                 if (mob.level().noCollision(mob, targetAABB)) {
                                     return checkPos;
                                 }
@@ -357,10 +343,10 @@ public class MobControlUtil {
                 }
             }
         }
-
+        
         return null;
     }
-
+    
     /**
      * 判定目标是否应被视为被控制生物的敌对对象。
      *
@@ -379,20 +365,20 @@ public class MobControlUtil {
             && Objects.equals(MobControlledData.getControllerUUID(controlledMob), MobControlledData.getControllerUUID(mob))) {
             return false;
         }
-
+        
         Player controller = MobControlledData.getController(controlledMob, controlledMob.level());
         UUID controllerUUID = MobControlledData.getControllerUUID(controlledMob);
-
+        
         // 目标是否是控制者
         if (target.equals(controller)) {
             return false;
         }
-
+        
         // 受控生物默认不主动敌对玩家，玩家仅能走防御反击链路。
         if (target instanceof Player) {
             return false;
         }
-
+        
         // 目标是否是控制者的宠物
         if (target instanceof OwnableEntity ownable) {
             if (controllerUUID != null) {
@@ -400,7 +386,7 @@ public class MobControlUtil {
                 return owner == null || !owner.getUUID().equals(controllerUUID);
             }
         }
-
+        
         // 目标是否有自定义名称且与控制者名称相同
         /*if (controllerUUID != null) {
             Player targetController = MobControlledData.getController(controlledMob, controlledMob.level());
@@ -416,10 +402,10 @@ public class MobControlUtil {
                 }
             }
         }*/
-
+        
         return true;
     }
-
+    
     /**
      * 判定目标是否可作为受控生物的“防御反击”对象。
      */
@@ -436,7 +422,7 @@ public class MobControlUtil {
         if (!MobControlledData.isControlledEntity(controlledMob)) {
             return false;
         }
-
+        
         UUID controllerUUID = MobControlledData.getControllerUUID(controlledMob);
         if (controllerUUID == null
             || controllerUUID.equals(player.getUUID())
@@ -444,15 +430,15 @@ public class MobControlUtil {
             || player.isSpectator()) {
             return false;
         }
-
+        
         if (player.equals(controlledMob.getLastHurtByMob())) {
             return true;
         }
-
+        
         Player controller = MobControlledData.getController(controlledMob, controlledMob.level());
         return controller != null && player.equals(controller.getLastHurtByMob());
     }
-
+    
     /**
      * 用于攻击事件上下文：攻击者已知时允许立即进入反击。
      */
@@ -463,14 +449,14 @@ public class MobControlUtil {
         if (!MobControlledData.isControlledEntity(controlledMob)) {
             return false;
         }
-
+        
         UUID controllerUUID = MobControlledData.getControllerUUID(controlledMob);
         return controllerUUID != null
-               && !controllerUUID.equals(player.getUUID())
-               && !player.isCreative()
-               && !player.isSpectator();
+            && !controllerUUID.equals(player.getUUID())
+            && !player.isCreative()
+            && !player.isSpectator();
     }
-
+    
     /**
      * 判定目标玩家是否可作为“主人指令攻击”的合法对象。
      *
@@ -487,14 +473,14 @@ public class MobControlUtil {
         if (!Config.CONTROLLED_MOBS_ATTACK_PLAYERS_ON_COMMAND.get()) {
             return false;
         }
-
+        
         UUID controllerUUID = MobControlledData.getControllerUUID(controlledMob);
         return controllerUUID != null
-               && !controllerUUID.equals(player.getUUID())
-               && !player.isCreative()
-               && !player.isSpectator();
+            && !controllerUUID.equals(player.getUUID())
+            && !player.isCreative()
+            && !player.isSpectator();
     }
-
+    
     /**
      * 判断目标实体是否为受控生物的控制者本人。
      *
@@ -509,22 +495,22 @@ public class MobControlUtil {
         UUID controllerUUID = MobControlledData.getControllerUUID(controlledMob);
         return controllerUUID != null && controllerUUID.equals(target.getUUID());
     }
-
+    
     /**
      * 判定目标是否允许继续作为当前战斗目标。
      */
     public static boolean canKeepCombatTarget(LivingEntity controlledMob, @Nullable LivingEntity target) {
         return isEnemy(controlledMob, target)
-               || (
-                   controlledMob instanceof Mob mob
-                   && MobControlledData.isSystemAttack(mob)
-                   && (
-                       canRetaliateAgainst(controlledMob, target)
-                       || canAttackPlayerByOwnerCommand(controlledMob, target)
-                   )
-               );
+            || (
+            controlledMob instanceof Mob mob
+                && MobControlledData.isSystemAttack(mob)
+                && (
+                canRetaliateAgainst(controlledMob, target)
+                    || canAttackPlayerByOwnerCommand(controlledMob, target)
+            )
+        );
     }
-
+    
     /**
      * 设置生物攻击目标，并兼容监守者的愤怒系统。
      *
@@ -539,7 +525,7 @@ public class MobControlUtil {
             mob.setTarget(target);
         }
     }
-
+    
     /**
      * 向玩家发送着色后的动作栏提示文本。
      *
@@ -561,7 +547,7 @@ public class MobControlUtil {
             serverPlayer.sendSystemMessage(message, true);
         }
     }
-
+    
     /**
      * 向玩家显示“控制模式切换”标题提示。
      *
@@ -577,7 +563,7 @@ public class MobControlUtil {
                 mobName,
                 Component.translatable(modeTranslationKey)
             ).setStyle(Style.EMPTY.withColor(color));
-
+            
             serverPlayer.connection.send(new ClientboundSetTitlesAnimationPacket(5, 30, 10));
             serverPlayer.connection.send(new ClientboundSetTitleTextPacket(title));
         }
