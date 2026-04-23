@@ -1,46 +1,45 @@
 package net.xiaoyu.mob_controller.network;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
-import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
+import net.xiaoyu.mob_controller.network.client.ClientPacketHandler;
 
 import java.util.Objects;
 import java.util.function.Supplier;
 
-public class MobControlCapabilitySyncPacket {
-    private final int entityId;
-    private final CompoundTag entityCap;
-
-    public MobControlCapabilitySyncPacket(int entityId, CompoundTag entityCap) {
-        this.entityId = entityId;
-        this.entityCap = entityCap;
-    }
-
+/**
+ * 服务端下发到客户端的控制能力同步数据包。
+ *
+ * <p>用于将指定实体的 {@link net.xiaoyu.mob_controller.capability.MobControlCapability} 数据
+ * 同步到客户端实体副本。</p>
+ */
+public record MobControlCapabilitySyncPacket(int entityId, CompoundTag entityCap) {
+    /**
+     * 从网络缓冲区反序列化数据包。
+     *
+     * @param buf 网络字节缓冲
+     */
     public MobControlCapabilitySyncPacket(FriendlyByteBuf buf) {
-        this.entityId = buf.readInt();
-        this.entityCap = Objects.requireNonNull(buf.readAnySizeNbt());
+        this(buf.readInt(), Objects.requireNonNull(buf.readAnySizeNbt()));
     }
 
+    /**
+     * 将数据包编码到网络缓冲区。
+     *
+     * @param buf 网络字节缓冲
+     */
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeInt(this.entityId);
         buf.writeNbt(this.entityCap);
     }
 
+    /**
+     * 在客户端线程应用能力同步。
+     *
+     * @param ctx 网络上下文提供器
+     */
     public void handle(Supplier<NetworkEvent.Context> ctx) {
-        if (ctx.get().getDirection() != NetworkDirection.PLAY_TO_CLIENT) {
-            return;
-        }
-        ctx.get().setPacketHandled(true);
-
-        Player player = Minecraft.getInstance().player;
-
-        if (player != null && player.level().getEntity(this.entityId) instanceof Mob mob) {
-            mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> cap.deserializeNBT(entityCap));
-        }
+        ctx.get().enqueueWork(() -> ClientPacketHandler.handleMobControlCapabilitySync(ctx, this));
     }
 }

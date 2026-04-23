@@ -2,6 +2,8 @@
   "config.jade.plugin_mob_controller.mob_owner": "显示生物控制器主人",
   "entity.mob_controller.controlled_pillager": "掠夺者",
   "entity.mob_controller.controlled_witch": "女巫",
+  "item.mob_controller.control_command": "控制信号发射器",
+  "item.mob_controller.heart_contract": "解控契约",
   "item.mob_controller.armor_editing_blueprint": "盔甲编辑蓝图",
   "item.mob_controller.mob_controller": "生物控制器",
   "itemGroup.mob_controller": "生物控制器",
@@ -10,5 +12,9 @@
   "mob_controller.mode.follow": "跟随中",
   "mob_controller.mode.stay": "停留中",
   "mob_controller.mode.wander": "游荡中",
+  "mob_controller.message.connection": "%s %s",
+  "mob_controller.message.respawn_scheduled": "%s 死了，将在 %s 秒后复活",
+  "mob_controller.message.respawned": "%s 复活了",
+  "mob_controller.title.control_mode": "%1$s %2$s",
   "mob_controller.tooltip.armor": "手持时鼠标右键实体以编辑TA的盔甲和物品栏。"
 }

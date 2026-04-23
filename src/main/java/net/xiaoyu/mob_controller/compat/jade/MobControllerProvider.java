@@ -6,7 +6,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
-import net.minecraft.world.entity.player.Player;
 import net.xiaoyu.mob_controller.MobController;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 import snownee.jade.api.EntityAccessor;
@@ -15,13 +14,27 @@ import snownee.jade.api.IServerDataProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
+/**
+ * Jade/WTHIT 实体信息提供器。
+ *
+ * <p>在提示框中展示受控生物的控制者名称，并由服务端下发所需数据。</p>
+ */
 public class MobControllerProvider implements IEntityComponentProvider, IServerDataProvider<EntityAccessor> {
 
+    /**
+     * 提供器单例。
+     */
     public static final MobControllerProvider INSTANCE = new MobControllerProvider();
 
+    /**
+     * 私有构造，使用单例。
+     */
     private MobControllerProvider() {
     }
 
+    /**
+     * 在客户端提示框追加“控制者”信息。
+     */
     @Override
     public void appendTooltip(ITooltip tooltip, EntityAccessor accessor, IPluginConfig config) {
         if (accessor.getServerData().contains("MobControllerOwner")) {
@@ -32,6 +45,9 @@ public class MobControllerProvider implements IEntityComponentProvider, IServerD
         }
     }
 
+    /**
+     * 在服务端写入提示框所需数据。
+     */
     @Override
     public void appendServerData(CompoundTag data, EntityAccessor accessor) {
         Entity entity = accessor.getEntity();
@@ -39,18 +55,21 @@ public class MobControllerProvider implements IEntityComponentProvider, IServerD
             return;
         }
 
-        // 被控制的生物??
+        // 仅处理受控生物
         if (!MobControlledData.isControlledEntity(mob)) {
             return;
         }
 
-        // 获取控制者
-        Player controller = MobControlledData.getController(mob, accessor.getLevel());
+        // 写入控制者名称
+        String controller = MobControlledData.getControllerName(mob, accessor.getLevel());
         if (controller != null) {
-            data.putString("MobControllerOwner", controller.getName().getString());
+            data.putString("MobControllerOwner", controller);
         }
     }
 
+    /**
+     * 获取该提供器的唯一标识。
+     */
     @Override
     public ResourceLocation getUid() {
         return new ResourceLocation(MobController.MOD_ID, "mob_owner");

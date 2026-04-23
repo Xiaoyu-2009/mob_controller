@@ -2,6 +2,8 @@
   "config.jade.plugin_mob_controller.mob_owner": "Show Mob Controller Owner",
   "entity.mob_controller.controlled_pillager": "Pillager",
   "entity.mob_controller.controlled_witch": "Witch",
+  "item.mob_controller.control_command": "Control Command",
+  "item.mob_controller.heart_contract": "Heart Contract",
   "item.mob_controller.armor_editing_blueprint": "Armor Editing Blueprint",
   "item.mob_controller.mob_controller": "Mob Controller",
   "itemGroup.mob_controller": "Mob Controller",
@@ -10,5 +12,9 @@
   "mob_controller.mode.follow": "Following",
   "mob_controller.mode.stay": "Staying",
   "mob_controller.mode.wander": "Wandering",
+  "mob_controller.message.connection": "%s %s",
+  "mob_controller.message.respawn_scheduled": "%s died and will respawn in %s seconds",
+  "mob_controller.message.respawned": "%s has respawned",
+  "mob_controller.title.control_mode": "%1$s %2$s",
   "mob_controller.tooltip.armor": "Hold and right-click on an entity to edit its armor and inventory."
 }

@@ -226,6 +226,8 @@ dependencies {
     implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.5.0"))
 
     implementation "org.jetbrains:annotations:17.0.0"
+
+    modRuntimeOnly("curse.maven:curtain-845348:4704521")
 }
 
 mixin {

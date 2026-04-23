@@ -13,14 +13,30 @@ import net.xiaoyu.mob_controller.client.renderner.RendererControlledWitch;
 import net.xiaoyu.mob_controller.registry.ModEntities;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
 
+/**
+ * 客户端模组事件处理器。
+ *
+ * <p>在客户端生命周期中注册菜单界面与实体渲染器。</p>
+ */
+
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientEvent {
+    /**
+     * 客户端初始化阶段注册菜单界面。
+     *
+     * @param event Forge 客户端初始化事件
+     */
     @SubscribeEvent
     public static void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> MenuScreens.register(ModMenuType.ARMOR_MENU.get(), GuiArmor::new));
     }
 
+    /**
+     * 注册受控实体渲染器。
+     *
+     * @param event 实体渲染器注册事件
+     */
     @SubscribeEvent
     public static void registerEntityRenders(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.CONTROLLED_PILLAGER.get(), RendererControlledPillager::new);
