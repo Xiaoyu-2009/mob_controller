@@ -8,17 +8,14 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.xiaoyu.mob_controller.client.gui.GuiArmor;
-import net.xiaoyu.mob_controller.client.renderner.RendererControlledPillager;
-import net.xiaoyu.mob_controller.client.renderner.RendererControlledWitch;
-import net.xiaoyu.mob_controller.registry.ModEntities;
 import net.xiaoyu.mob_controller.registry.ModMenuType;
+// 不再导入自定义渲染器
 
 /**
  * 客户端模组事件处理器。
  *
  * <p>在客户端生命周期中注册菜单界面与实体渲染器。</p>
  */
-
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientEvent {
@@ -39,7 +36,6 @@ public class ClientEvent {
      */
     @SubscribeEvent
     public static void registerEntityRenders(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(ModEntities.CONTROLLED_PILLAGER.get(), RendererControlledPillager::new);
-        event.registerEntityRenderer(ModEntities.CONTROLLED_WITCH.get(), RendererControlledWitch::new);
+        // 已移除对 CONTROLLED_PILLAGER 和 CONTROLLED_WITCH 的渲染器注册
     }
 }

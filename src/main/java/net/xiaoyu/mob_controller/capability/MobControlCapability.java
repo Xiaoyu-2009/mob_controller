@@ -193,6 +193,8 @@ public class MobControlCapability {
         nbt.putLong("LastCombatTime", lastCombatTime);
         nbt.putBoolean("IsSystemAttack", isSystemAttack);
         nbt.putBoolean("AggressiveMode", aggressiveMode);
+        nbt.putBoolean("IsSummoned", isSummoned);
+        nbt.putBoolean("SplitOffspring", splitOffspring);
         return nbt;
     }
 
@@ -221,5 +223,31 @@ public class MobControlCapability {
         lastCombatTime = nbt.getLong("LastCombatTime");
         isSystemAttack = nbt.getBoolean("IsSystemAttack");
         aggressiveMode = nbt.getBoolean("AggressiveMode");
+        isSummoned = nbt.getBoolean("IsSummoned");
+        splitOffspring = nbt.getBoolean("SplitOffspring");
+    }
+
+    // 在类字段区域添加
+    private boolean isSummoned = false;
+
+    // getter / setter
+    public boolean isSummoned() {
+        return isSummoned;
+    }
+
+    public void setSummoned(boolean summoned) {
+        isSummoned = summoned;
+    }
+
+    // 在类字段区域添加
+    private boolean splitOffspring = false;
+
+    // getter / setter
+    public boolean isSplitOffspring() {
+        return splitOffspring;
+    }
+
+    public void setSplitOffspring(boolean splitOffspring) {
+        this.splitOffspring = splitOffspring;
     }
 }

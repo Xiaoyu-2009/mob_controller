@@ -1,17 +1,22 @@
 package net.xiaoyu.mob_controller.event;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.monster.Pillager;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.hoglin.Hoglin;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
@@ -20,6 +25,9 @@ import net.minecraft.world.entity.monster.piglin.PiglinBrute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
@@ -32,6 +40,7 @@ import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -40,7 +49,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
-import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
+import net.xiaoyu.mob_controller.item.AggressiveSwitchItem;
+import net.xiaoyu.mob_controller.item.RideCommandItem;
 import net.xiaoyu.mob_controller.network.ApplyControlCommandPacket;
 import net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket;
 import net.xiaoyu.mob_controller.network.NetWorkManager;
@@ -52,11 +62,6 @@ import net.minecraft.world.phys.AABB;
 import java.util.List;
 import java.util.Comparator;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.Brain;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
-import net.minecraft.world.entity.monster.hoglin.Hoglin;
-import net.minecraft.world.entity.monster.Zoglin;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -79,8 +84,8 @@ public class MobControllerEvent {
     public static void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Mob) {
             event.addCapability(
-                new ResourceLocation("mob_controller", "mob_control"),
-                new MobControlCapabilityProvider()
+                    new ResourceLocation("mob_controller", "mob_control"),
+                    new MobControlCapabilityProvider()
             );
         }
     }
@@ -101,7 +106,7 @@ public class MobControllerEvent {
         }
 
         if (!(entity instanceof Animal) && !(entity instanceof Piglin) && entity instanceof Mob mob && MobControlledData.isControlledEntity(
-            mob)) {
+                mob)) {
             event.setResult(Event.Result.DENY);
         }
     }
@@ -129,9 +134,8 @@ public class MobControllerEvent {
     @SubscribeEvent
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
         if (event.getEntity() instanceof Mob mob) {
-
             // 仅在实体真正死亡离场时移除高生命限制记录，避免跨维度/卸载导致限制失效。
-            if (MobControlledData.isControlledEntity(mob) && !mob.isAlive()) {
+            if (MobControlledData.isControlledEntity(mob) && !mob.isAlive() && mob.getHealth() <= 0.0F) {
                 MobControlledData.removeControlledMobOnDeath(mob);
             }
         }
@@ -144,18 +148,51 @@ public class MobControllerEvent {
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.isCanceled()) return;
         if (event.getEntity() instanceof Mob mob && mob.level() instanceof ServerLevel serverLevel
-            && MobControlledData.isControlledEntity(mob)) {
-            if (MobControlledData.scheduleRespawn(mob, serverLevel)) {
+                && MobControlledData.isControlledEntity(mob)) {
+
+            if (!Config.ENABLE_RESPAWN.get()) {
+                if (mob.level() instanceof ServerLevel deathLevel) {
+                    Player controller = MobControlledData.getController(mob, deathLevel);
+                    if (controller instanceof ServerPlayer serverPlayer) {
+                        String deathCause = extractDeathCause(event.getSource(), mob);
+                        serverPlayer.sendSystemMessage(Component.translatable("mob_controller.message.death_cause",
+                                mob.getDisplayName(), deathCause));
+                    }
+                }
+                return;
+            }
+
+            String deathCause = extractDeathCause(event.getSource(), mob);
+
+            if (MobControlledData.scheduleRespawn(mob, serverLevel, deathCause)) {
                 Player controller = MobControlledData.getController(mob, serverLevel);
                 if (controller instanceof ServerPlayer serverPlayer) {
+                    int seconds = Config.RESPAWN_DELAY_TICKS.get() / 20;
+                    // 使用新的本地化键，三个参数：生物名、死因、秒数
                     serverPlayer.sendSystemMessage(Component.translatable(
-                        "mob_controller.message.respawn_scheduled",
-                        mob.getDisplayName(),
-                        Config.RESPAWN_DELAY_TICKS.get() / 20
+                            "mob_controller.message.respawn_scheduled_cause",
+                            mob.getDisplayName(),
+                            deathCause,
+                            seconds
                     ));
                 }
             }
         }
+    }
+
+    // 辅助方法：从 DamageSource 提取纯粹的死因短语（去掉实体名称）
+    private static String extractDeathCause(DamageSource source, LivingEntity victim) {
+        Component deathMessage = source.getLocalizedDeathMessage(victim);
+        String fullMessage = deathMessage.getString();
+
+        // 移除生物名称前缀（假设格式为 "生物名 死因"）
+        String victimName = victim.getName().getString();
+        if (fullMessage.startsWith(victimName)) {
+            String suffix = fullMessage.substring(victimName.length()).trim();
+            if (!suffix.isEmpty()) return suffix;
+        }
+        // 保底：使用死亡消息的原始文本（可能含生物名）
+        return fullMessage;
     }
 
     /**
@@ -177,7 +214,8 @@ public class MobControllerEvent {
             if (mob.level().isClientSide) {
                 return;
             }
-
+            if (!MobControlledData.isControlledEntity(mob)) return;
+            if (MobControlledData.isSummoned(mob)) return;   // 新增：召唤物不自动回血
             if (MobControlledData.isControlledEntity(mob)) {
                 mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
                     long currentTime = mob.level().getGameTime();
@@ -190,8 +228,8 @@ public class MobControllerEvent {
 
                     // 每2tick恢复1生命值[没有有效攻击目标且已脱战]
                     if (currentTime - lastHealTime >= HEAL_INTERVAL_TICKS
-                        && !inCombat
-                        && currentTime - cap.getLastCombatTime() >= Config.CONTROLLED_MOB_HEAL_OUT_OF_COMBAT_DELAY_TICKS.get()) {
+                            && !inCombat
+                            && currentTime - cap.getLastCombatTime() >= Config.CONTROLLED_MOB_HEAL_OUT_OF_COMBAT_DELAY_TICKS.get()) {
                         if (mob.getHealth() < mob.getMaxHealth()) {
                             mob.heal(1.0F);
                             cap.setLastHealTime(currentTime);
@@ -199,6 +237,55 @@ public class MobControllerEvent {
                     }
                 });
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onAttackEntity(AttackEntityEvent event) {
+        Player player = event.getEntity();
+        Entity target = event.getTarget();
+        ItemStack mainHand = player.getMainHandItem();
+        if (mainHand.getItem() instanceof RideCommandItem && !player.level().isClientSide) {
+            if (RideCommandItem.handleLeftClick((ServerPlayer) player, target, mainHand)) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onAttackEntityWithAggressiveSwitch(AttackEntityEvent event) {
+        Player player = event.getEntity();
+        ItemStack mainHand = player.getMainHandItem();
+
+        if (!(mainHand.getItem() instanceof AggressiveSwitchItem)) {
+            return;
+        }
+
+        Entity target = event.getTarget();
+        if (!(target instanceof Mob mob)) {
+            return;
+        }
+
+        // 潜行时不处理单体（由鼠标事件处理批量）
+        if (player.isShiftKeyDown()) {
+            return;
+        }
+
+        // 检查是否为玩家控制的生物
+        if (!MobControlledData.isControlledEntity(mob) ||
+                !Objects.equals(MobControlledData.getControllerUUID(mob), player.getUUID())) {
+            return;
+        }
+
+        // 取消攻击伤害
+        event.setCanceled(true);
+
+        // 发送单体切换包（索敌模式 = true）
+        if (!player.level().isClientSide) {
+            NetWorkManager.INSTANCE.sendToServer(new SwitchAggressiveModePacket(true, mob.getId()));
+        } else {
+            // 客户端播放手臂摆动动画
+            player.swing(InteractionHand.MAIN_HAND);
         }
     }
 
@@ -268,7 +355,7 @@ public class MobControllerEvent {
                                 if (attacker != null) {
 
                                     boolean attackerIsOtherPlayer = attacker instanceof Player attackerPlayer
-                                                                    && !attackerPlayer.getUUID().equals(controllerUUID);
+                                            && !attackerPlayer.getUUID().equals(controllerUUID);
 
                                     // 其他玩家攻击主人时，允许优先切换为护主目标。
                                     if (!mob.equals(attacker) && (mob.getTarget() == null || attackerIsOtherPlayer)) {
@@ -306,7 +393,7 @@ public class MobControllerEvent {
     }
 
     /**
-     * 每刻处理受控生物的索敌模式：主动寻找并锁定敌对目标，但不覆盖已有的有效目标。
+     * 每刻处理受控生物的索敌模式：主动寻找并锁定敌对生物，但不覆盖已有的有效目标。
      * 对猪灵、疣猪兽等基于 Brain 的生物使用记忆模块设置目标。
      * 加入冷却机制避免频繁操作导致AI抽搐。
      */
@@ -398,51 +485,52 @@ public class MobControllerEvent {
 
     /**
      * 控制者攻击其他生物时，调度受控生物协同攻击。
+     * 修改：现在即使受控生物已有战斗目标，也会强制切换到玩家攻击的目标（玩家指令优先）。
      */
     @SubscribeEvent
     public static void onControllerAttackOthers(LivingHurtEvent event) {
         if (event.getSource().getEntity() instanceof Player player) {
 
             if (!player.level().isClientSide() && player.level() instanceof ServerLevel serverLevel) {
+                LivingEntity playerTarget = event.getEntity(); // 玩家攻击的目标
 
                 for (Entity entity : serverLevel.getAllEntities()) {
                     if (entity instanceof Mob mob) {
-
                         if (MobControlledData.isControlledEntity(mob)) {
                             UUID controllerUUID = MobControlledData.getControllerUUID(mob);
-
                             if (controllerUUID != null && controllerUUID.equals(player.getUUID())) {
-                                if (event.getEntity() instanceof LivingEntity) {
-                                    LivingEntity target = event.getEntity();
-                                    LivingEntity currentTarget = mob.getTarget();
-                                    if (!mob.equals(target)
-                                        && (currentTarget == null || !MobControlUtil.canKeepCombatTarget(mob, currentTarget))) {
-                                        boolean canAttackTarget = target instanceof Player
-                                                                  ? MobControlUtil.canAttackPlayerByOwnerCommand(mob, target)
-                                                                  : MobControlUtil.isEnemy(mob, target);
-                                        if (!canAttackTarget) {
-                                            continue;
-                                        }
+                                // 玩家指挥攻击：强制覆盖现有目标，不再检查 canKeepCombatTarget
+                                // 但需要检查新目标是否允许攻击（如是否为控制者本人，是否配置允许攻击玩家等）
+                                boolean canAttackTarget = playerTarget instanceof Player
+                                        ? MobControlUtil.canAttackPlayerByOwnerCommand(mob, playerTarget)
+                                        : MobControlUtil.isEnemy(mob, playerTarget);
+                                if (!canAttackTarget) {
+                                    continue;
+                                }
 
-                                        MobControlledData.markCombat(mob);
+                                // 清除当前仇恨
+                                mob.setTarget(null);
+                                if (mob instanceof AbstractPiglin || mob instanceof Hoglin || mob instanceof Zoglin) {
+                                    Brain<?> brain = mob.getBrain();
+                                    brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                                    brain.eraseMemory(MemoryModuleType.ANGRY_AT);
+                                }
 
-                                        MobControlledData.markSystemAttack(mob);
+                                MobControlledData.markCombat(mob);
+                                MobControlledData.markSystemAttack(mob);
 
-                                        // 疣猪兽/僵尸疣猪兽用ATTACK_TARGET内存模块
-                                        if (mob instanceof Hoglin || mob instanceof Zoglin) {
-                                            Brain<?> brain = mob.getBrain();
-                                            brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-                                            brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, 200L);
-                                        } else if (mob instanceof Piglin || mob instanceof PiglinBrute) {
-                                            // 猪灵/猪灵蛮兵用ANGRY_AT内存模块
-                                            Brain<?> brain = mob.getBrain();
-                                            brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-                                            brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, target.getUUID(), 600L);
-                                            brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, 200L);
-                                        } else {
-                                            MobControlUtil.setMobTargetWithAnger(mob, target);
-                                        }
-                                    }
+                                // 设置新目标
+                                if (mob instanceof Hoglin || mob instanceof Zoglin) {
+                                    Brain<?> brain = mob.getBrain();
+                                    brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+                                    brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, playerTarget, 200L);
+                                } else if (mob instanceof Piglin || mob instanceof PiglinBrute) {
+                                    Brain<?> brain = mob.getBrain();
+                                    brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+                                    brain.setMemoryWithExpiry(MemoryModuleType.ANGRY_AT, playerTarget.getUUID(), 600L);
+                                    brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, playerTarget, 200L);
+                                } else {
+                                    MobControlUtil.setMobTargetWithAnger(mob, playerTarget);
                                 }
                             }
                         }
@@ -475,7 +563,7 @@ public class MobControllerEvent {
 
                 // 目标不存在/死亡/不再存活时清除
                 if (target == null || target.isDeadOrDying() || !target.isAlive() ||
-                    !target.level().equals(mob.level()) || target.distanceTo(mob) > 64.0F) {
+                        !target.level().equals(mob.level()) || target.distanceTo(mob) > 64.0F) {
 
                     if (target != null) {
                         mob.setTarget(null);
@@ -489,15 +577,16 @@ public class MobControllerEvent {
 
                 if (!mob.level().isClientSide) {
                     mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap ->
-                        NetWorkManager.INSTANCE.send(
-                            PacketDistributor.TRACKING_ENTITY_AND_SELF.with(event::getEntity),
-                            new MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT())
-                        ));
+                            NetWorkManager.INSTANCE.send(
+                                    PacketDistributor.TRACKING_ENTITY_AND_SELF.with(event::getEntity),
+                                    new MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT())
+                            ));
                 }
             }
         }
     }
 
+    // 修改原有的 onPlayerRightClickControlledMob 方法
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onPlayerRightClickControlledMob(InputEvent.MouseButton.Post event) {
@@ -509,7 +598,7 @@ public class MobControllerEvent {
 
         ItemStack mainHand = mc.player.getMainHandItem();
 
-        // 控制令逻辑
+        // 控制令逻辑（保持不变）
         if (mainHand.is(ModItems.CONTROL_COMMAND_ITEM.get())) {
             MobControlledData.ControlMode mode = switch (event.getButton()) {
                 case InputConstants.MOUSE_BUTTON_LEFT -> MobControlledData.ControlMode.FOLLOW;
@@ -519,16 +608,38 @@ public class MobControllerEvent {
             };
             if (mode != null) {
                 NetWorkManager.INSTANCE.sendToServer(new ApplyControlCommandPacket(mode));
+                // 播放使用动画
+                mc.player.swing(InteractionHand.MAIN_HAND);
             }
         }
-        // 护主切换器逻辑（新增）
+        // 护主切换器逻辑（修改：支持批量切换）
         else if (mainHand.is(ModItems.AGGRESSIVE_SWITCH_ITEM.get())) {
-            boolean aggressive = switch (event.getButton()) {
-                case InputConstants.MOUSE_BUTTON_LEFT -> true;   // 左键 -> 索敌模式
-                case InputConstants.MOUSE_BUTTON_RIGHT -> false; // 右键 -> 护主模式
-                default -> false;
-            };
-            NetWorkManager.INSTANCE.sendToServer(new SwitchAggressiveModePacket(aggressive));
+            int button = event.getButton();
+            if (button != InputConstants.MOUSE_BUTTON_LEFT && button != InputConstants.MOUSE_BUTTON_RIGHT) {
+                return;
+            }
+            boolean isSneaking = mc.player.isShiftKeyDown();
+            boolean aggressive = button == InputConstants.MOUSE_BUTTON_LEFT; // 左键为索敌模式，右键为护主模式
+
+            // 播放使用动画
+            mc.player.swing(InteractionHand.MAIN_HAND);
+
+            if (isSneaking) {
+                // 潜行模式：批量切换
+                NetWorkManager.INSTANCE.sendToServer(new SwitchAggressiveModePacket(aggressive, -1));
+            } else {
+                // 非潜行模式：瞄准单体切换
+                Entity targetedEntity = mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.ENTITY
+                        ? ((EntityHitResult) mc.hitResult).getEntity() : null;
+                if (targetedEntity instanceof Mob mob &&
+                        MobControlledData.isControlledEntity(mob) &&
+                        Objects.equals(MobControlledData.getControllerUUID(mob), mc.player.getUUID())) {
+                    NetWorkManager.INSTANCE.sendToServer(new SwitchAggressiveModePacket(aggressive, mob.getId()));
+                } else {
+                    // 未瞄准有效受控生物，发送无效单体包（服务端会反馈消息）
+                    NetWorkManager.INSTANCE.sendToServer(new SwitchAggressiveModePacket(aggressive, -2));
+                }
+            }
         }
     }
 
@@ -539,10 +650,10 @@ public class MobControllerEvent {
     public static void onPlayerEntityInteract(PlayerInteractEvent.EntityInteract event) {
         ItemStack mainHandItem = event.getEntity().getMainHandItem();
         if (
-            !(event.getTarget() instanceof Mob mob)
-            || mainHandItem.is(ModItems.MOB_CONTROLLER_ITEM.get())
-            || mainHandItem.is(ModItems.HEART_CONTRACT_ITEM.get())
-            || event.getEntity().isShiftKeyDown()
+                !(event.getTarget() instanceof Mob mob)
+                        || mainHandItem.is(ModItems.MOB_CONTROLLER_ITEM.get())
+                        || mainHandItem.is(ModItems.HEART_CONTRACT_ITEM.get())
+                        || event.getEntity().isShiftKeyDown()
         ) {
             return;
         }
@@ -550,11 +661,11 @@ public class MobControllerEvent {
             return;
         }
         if (
-            !MobControlledData.isControlledEntity(mob)
-            || !Objects.equals(
-                MobControlledData.getControllerUUID(mob),
-                event.getEntity().getUUID()
-            )
+                !MobControlledData.isControlledEntity(mob)
+                        || !Objects.equals(
+                        MobControlledData.getControllerUUID(mob),
+                        event.getEntity().getUUID()
+                )
         ) {
             return;
         }
@@ -570,10 +681,7 @@ public class MobControllerEvent {
     public static void onLivingChangeTargetEvent(LivingChangeTargetEvent event) {
         if (event.getEntity() instanceof Mob mob && event.getNewTarget() != null) {
             if (MobControlledData.isControlledEntity(mob)
-                && !MobControlUtil.canKeepCombatTarget(mob, event.getNewTarget())) {
-                if (!(mob instanceof EntityControlledWitch)) {
-                    event.setCanceled(true);
-                }
+                    && !MobControlUtil.canKeepCombatTarget(mob, event.getNewTarget())) {
             } else if (MobControlledData.isControlledEntity(mob) && isValidCombatTarget(mob, event.getNewTarget())) {
                 MobControlledData.markCombat(mob);
             }
@@ -613,10 +721,10 @@ public class MobControllerEvent {
 
     private static boolean isValidCombatTarget(Mob mob, @Nullable LivingEntity target) {
         return target != null
-               && target.isAlive()
-               && !target.isDeadOrDying()
-               && target.level().equals(mob.level())
-               && target.distanceToSqr(mob) <= 64.0D * 64.0D;
+                && target.isAlive()
+                && !target.isDeadOrDying()
+                && target.level().equals(mob.level())
+                && target.distanceToSqr(mob) <= 64.0D * 64.0D;
     }
 
     @Nullable
@@ -628,6 +736,18 @@ public class MobControllerEvent {
             return livingEntity;
         }
         return null;
+    }
+
+    @SubscribeEvent
+    public static void onLivingTick(LivingEvent.LivingTickEvent event) {
+        if (event.getEntity() instanceof Pillager pillager && !event.getEntity().level().isClientSide) {
+            if (MobControlledData.isControlledEntity(pillager)) {
+                ItemStack mainHand = pillager.getMainHandItem();
+                if (mainHand.is(Items.CROSSBOW) && mainHand.isDamaged()) {
+                    mainHand.setDamageValue(0);
+                }
+            }
+        }
     }
 
     @Nullable
