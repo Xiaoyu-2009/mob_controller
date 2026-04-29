@@ -15,7 +15,6 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeHooks;
-import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
@@ -51,8 +50,7 @@ public abstract class MixinLivingEntity extends Entity {
         if (cir.getReturnValue()) {
             if ((Object) (this) instanceof LivingEntity mob) {
                 if (MobControlledData.isControlledEntity(mob)
-                    && !MobControlUtil.canKeepCombatTarget(mob, target)
-                    && !(mob instanceof EntityControlledWitch)) {
+                    && !MobControlUtil.canKeepCombatTarget(mob, target)) {
                     cir.cancel();
                 }
             }
@@ -67,7 +65,7 @@ public abstract class MixinLivingEntity extends Entity {
         LivingEntity livingEntity = (LivingEntity) (Object) this;
         Entity attacker = source.getEntity();
 
-        // 投射物
+        // 处理投射物：追溯到发射者
         if (source.getDirectEntity() instanceof Projectile projectile) {
             Entity projectileOwner = projectile.getOwner();
             if (projectileOwner instanceof LivingEntity) {
@@ -75,31 +73,22 @@ public abstract class MixinLivingEntity extends Entity {
             }
         }
 
-        // 一般情况下的攻击
+        // 拦截受控生物对友方的所有伤害（无论是否系统攻击）
         if (attacker instanceof LivingEntity mob && MobControlledData.isControlledEntity(mob)) {
-            // 系统攻击（反击/护主）时允许伤害，否则检查敌友关系
-            if (mob instanceof Mob mobInstance) {
-                if (!MobControlledData.isSystemAttack(mobInstance) && !MobControlUtil.isEnemy(mob, livingEntity)) {
-                    // Brain 类生物按原版逻辑攻击玩家，仅阻止伤害控制者本人
-                    if (!(livingEntity instanceof Player) || MobControlUtil.isController(mob, livingEntity)) {
-                        cir.cancel();
-                    }
-                }
-            } else if (!MobControlUtil.isEnemy(mob, livingEntity)) {
+            if (MobControlUtil.isAlly(mob, livingEntity)) {
                 cir.cancel();
+                return;
             }
         }
 
-        // 其他生物受到被控制生物攻击的反击
+        // 其他生物受到被控制生物攻击的反击（保留原逻辑）
         if (attacker instanceof LivingEntity controlledMob && MobControlledData.isControlledEntity(controlledMob)
-            && livingEntity instanceof Mob otherMob && !MobControlledData.isControlledEntity(otherMob)) {
-            // 排除创造/旁观者模式
+                && livingEntity instanceof Mob otherMob && !MobControlledData.isControlledEntity(otherMob)) {
             if (source.getEntity() instanceof Player player) {
                 if (player.isCreative() || player.isSpectator()) {
                     return;
                 }
             }
-
             MobControlledData.markSystemAttack(otherMob);
             otherMob.setTarget(controlledMob);
         }

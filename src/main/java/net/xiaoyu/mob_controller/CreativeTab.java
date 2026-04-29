@@ -14,7 +14,7 @@ import net.xiaoyu.mob_controller.registry.ModItems;
  *
  * <p>标签页标识为 {@code mob_controller:mob_controller_tab}，
  * 显示名称通过翻译键 {@code itemGroup.mob_controller} 本地化，
- * 图标为生物控制器物品（{@link ModItems#MOB_CONTROLLER_ITEM}）。</p>
+ * 图标为创造模式控制器物品（{@link ModItems#CREATIVE_MOB_CONTROLLER_ITEM}）。</p>
  *
  * <p>标签页内包含以下物品（按展示顺序）：</p>
  * <ol>
@@ -23,6 +23,7 @@ import net.xiaoyu.mob_controller.registry.ModItems;
  *   <li>心变契约 —— 解除对生物的控制；</li>
  *   <li>盔甲编辑蓝图 —— 打开被控生物的装备界面；</li>
  *   <li>护主切换器 —— 切换受控生物的战斗风格（护主/索敌）。</li>
+ *   <li>单体护主切换器 —— 切换单个受控生物的索敌/护主模式。</li>
  * </ol>
  */
 public class CreativeTab {
@@ -43,18 +44,24 @@ public class CreativeTab {
             "mob_controller_tab",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.mob_controller"))
-                    .icon(() -> new ItemStack(ModItems.MOB_CONTROLLER_ITEM.get()))
+                    .icon(() -> new ItemStack(ModItems.CREATIVE_MOB_CONTROLLER_ITEM.get()))
                     .displayItems((params, output) -> {
+                        // 创造模式控制器
+                        output.accept(ModItems.CREATIVE_MOB_CONTROLLER_ITEM.get());
                         // 生物控制器
                         output.accept(ModItems.MOB_CONTROLLER_ITEM.get());
-                        // 控制令
-                        output.accept(ModItems.CONTROL_COMMAND_ITEM.get());
                         // 心变契约
                         output.accept(ModItems.HEART_CONTRACT_ITEM.get());
-                        // 盔甲编辑蓝图
-                        output.accept(ModItems.ARMOR_EDITING_BLUEPRINT.get());
+                        // 五谷杂粮
+                        output.accept(ModItems.GRAIN_ITEM.get());
+                        // 控制令
+                        output.accept(ModItems.CONTROL_COMMAND_ITEM.get());
                         // 护主切换器
                         output.accept(ModItems.AGGRESSIVE_SWITCH_ITEM.get());
+                        // 骑乘令
+                        output.accept(ModItems.RIDE_COMMAND_ITEM.get());
+                        // 盔甲编辑蓝图
+                        output.accept(ModItems.ARMOR_EDITING_BLUEPRINT.get());
                     })
                     .build()
     );

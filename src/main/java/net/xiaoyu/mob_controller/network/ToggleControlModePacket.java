@@ -3,8 +3,11 @@ package net.xiaoyu.mob_controller.network;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Mob;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.PacketDistributor;
+import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
@@ -58,7 +61,13 @@ public record ToggleControlModePacket(int entityId) {
 
                     MobControlledData.ControlMode newMode = MobControlledData.toggleControlMode(mob);
 
+                    player.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
+
                     String modeKey = "mob_controller.mode." + newMode.toString().toLowerCase();
+
+                    if (Config.PLAY_SOUND_ON_MODE_SWITCH.get()) {
+                        NetWorkManager.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PlaySoundPacket());
+                    }
 
                     MobControlUtil.showMessageToPlayer(player, mob.getDisplayName(), modeKey, new Object[]{}, ChatFormatting.GOLD);
                 }

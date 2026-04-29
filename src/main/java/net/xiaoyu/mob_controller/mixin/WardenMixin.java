@@ -26,6 +26,8 @@ import java.util.Optional;
  */
 @Mixin(Warden.class)
 public class WardenMixin {
+
+
     /**
      * 黑暗效果持续时间。
      */
@@ -43,17 +45,26 @@ public class WardenMixin {
     @Inject(method = "canTargetEntity", at = @At("HEAD"), cancellable = true)
     private void targetWarden(@Nullable Entity entity, CallbackInfoReturnable<Boolean> info) {
         Warden warden = (Warden) (Object) this;
-
         if (entity instanceof LivingEntity livingEntity) {
-
-            // 被控制的监守者取消对非敌对目标的攻击欲望，但允许攻击非控制者玩家
             if (MobControlledData.isControlledEntity(warden)) {
                 if (entity instanceof Player) {
                     // 只阻止攻击控制者本人，其余玩家按原版逻辑
                     if (MobControlUtil.isController(warden, entity)) {
                         info.setReturnValue(false);
                     }
-                } else if (!MobControlUtil.isEnemy(warden, livingEntity)) {
+                }
+                // 允许受控监守者攻击其他监守者（未被同一控制者控制）
+                else if (entity instanceof Warden) {
+                    // 目标是监守者且不是同一控制者 -> 允许攻击
+                    if (!MobControlUtil.isController(warden, entity)) {
+                        info.setReturnValue(true);
+                        info.cancel();          // 跳过原版方法，绕过 EntityType.WARDEN 检查
+                    } else {
+                        // 同一控制者（极少发生，但确保不内斗）
+                        info.setReturnValue(false);
+                    }
+                }
+                else if (!MobControlUtil.isEnemy(warden, livingEntity)) {
                     info.setReturnValue(false);
                 }
             }

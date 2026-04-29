@@ -7,7 +7,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.ElderGuardian;
 import net.minecraft.world.level.entity.EntityAccess;
 import net.minecraftforge.common.extensions.IForgeEntity;
-import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
 import net.xiaoyu.mob_controller.entity.IControllableEntity;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
@@ -40,7 +39,7 @@ public abstract class MixinEntity implements Nameable, EntityAccess, CommandSour
                 if (MobControlledData.isControlledEntity(mob) && !MobControlUtil.canKeepCombatTarget(
                     mob,
                     livingEntity
-                ) && !(mob instanceof EntityControlledWitch)) {
+                )) {
                     cir.setReturnValue(true);
                 }
             }

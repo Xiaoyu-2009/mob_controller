@@ -1,3 +1,7 @@
+// ============================================================
+// 源文件: C:/Users/Mnibr/Desktop/生物控制器源码/mob_controller-1.20.1-Forge/src\main\java\net\xiaoyu\mob_controller\registry\ModItems.java
+// ============================================================
+
 package net.xiaoyu.mob_controller.registry;
 
 import net.minecraft.world.item.Item;
@@ -5,10 +9,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import net.xiaoyu.mob_controller.MobController;
-import net.xiaoyu.mob_controller.item.AggressiveSwitchItem;
-import net.xiaoyu.mob_controller.item.HeartContractItem;
-import net.xiaoyu.mob_controller.item.MobArmor;
-import net.xiaoyu.mob_controller.item.MobControllerItem;
+import net.xiaoyu.mob_controller.item.*;
 
 /**
  * 本模组物品注册表。
@@ -32,7 +33,7 @@ public class ModItems {
      */
     public static final RegistryObject<Item> CONTROL_COMMAND_ITEM = ITEMS.register(
             "control_command",
-            () -> new Item(new Item.Properties().stacksTo(1))
+            () -> new ControlCommandItem(new Item.Properties().stacksTo(1))
     );
 
     /**
@@ -51,12 +52,36 @@ public class ModItems {
             () -> new MobArmor(new Item.Properties().stacksTo(1))
     );
 
-    // 新增：护主切换器
     /**
-     * 护主切换器。
+     * 护主切换器
      */
     public static final RegistryObject<Item> AGGRESSIVE_SWITCH_ITEM = ITEMS.register(
             "aggressive_switch",
             () -> new AggressiveSwitchItem(new Item.Properties().stacksTo(1))
+    );
+
+
+    /**
+     * 骑乘令
+     */
+    public static final RegistryObject<Item> RIDE_COMMAND_ITEM = ITEMS.register(
+            "ride_command",
+            () -> new RideCommandItem(new Item.Properties().stacksTo(1))
+    );
+
+    /**
+     * 创造模式生物控制器
+     */
+    public static final RegistryObject<Item> CREATIVE_MOB_CONTROLLER_ITEM = ITEMS.register(
+            "creative_mob_controller",
+            () -> new CreativeMobControllerItem(new Item.Properties().stacksTo(1))
+    );
+
+    /**
+     * 五谷杂粮
+     */
+    public static final RegistryObject<Item> GRAIN_ITEM = ITEMS.register(
+            "grain",
+            () -> new GrainItem(new Item.Properties().stacksTo(64))
     );
 }

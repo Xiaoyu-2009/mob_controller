@@ -10,10 +10,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityRegister;
 import net.xiaoyu.mob_controller.event.MobControllerEvent;
 import net.xiaoyu.mob_controller.network.NetWorkManager;
-import net.xiaoyu.mob_controller.registry.ModEffects;
-import net.xiaoyu.mob_controller.registry.ModEntities;
-import net.xiaoyu.mob_controller.registry.ModItems;
-import net.xiaoyu.mob_controller.registry.ModMenuType;
+import net.xiaoyu.mob_controller.recipe.ConfigRecipeCondition;
+import net.xiaoyu.mob_controller.registry.*;
 
 /**
  * Mob Controller 模组的主入口类，负责在 Forge 模组加载阶段完成所有子系统的注册与初始化。
@@ -64,6 +62,8 @@ public class MobController {
         MinecraftForge.EVENT_BUS.register(MobControllerEvent.class);
         eventBus.register(MobControlCapabilityRegister.class);
         NetWorkManager.register();
+        net.minecraftforge.common.crafting.CraftingHelper.register(ConfigRecipeCondition.Serializer.INSTANCE);
+        ModSounds.SOUNDS.register(eventBus);
     }
 
     /**

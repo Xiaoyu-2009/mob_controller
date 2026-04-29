@@ -9,9 +9,12 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.xiaoyu.mob_controller.item.HeartContractItem;
+import net.xiaoyu.mob_controller.item.MobArmor;
 import net.xiaoyu.mob_controller.item.MobControllerItem;
 import net.xiaoyu.mob_controller.network.NetWorkManager;
 import net.xiaoyu.mob_controller.network.ToggleControlModePacket;
+import net.xiaoyu.mob_controller.util.CustomControlHandler;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
@@ -39,9 +42,29 @@ abstract class PlayerMixin extends Entity {
     private void onInteractOn(Entity entityToInteractOn, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         Player player = (Player) (Object) this;
         ItemStack stack = player.getItemInHand(hand);
-        if (!(stack.getItem() instanceof MobControllerItem controllerItem) || !(entityToInteractOn instanceof Mob)) return;
-        InteractionResult result = controllerItem.interactLivingEntity(stack, player, (LivingEntity) entityToInteractOn, hand);
-        if (result != InteractionResult.PASS) cir.setReturnValue(result);
+        if (!(entityToInteractOn instanceof Mob mob)) return;
+
+        if (!MobControlledData.isControlledEntity(mob)) {
+            InteractionResult customResult = CustomControlHandler.handleCustomControl(player, mob, stack, hand);
+            if (customResult != InteractionResult.PASS) {
+                cir.setReturnValue(customResult);
+                return;
+            }
+        }
+
+        // 生物控制器处理
+        if (stack.getItem() instanceof MobControllerItem controllerItem) {
+            InteractionResult result = controllerItem.interactLivingEntity(stack, player, mob, hand);
+            if (result != InteractionResult.PASS) cir.setReturnValue(result);
+            return;
+        }
+
+        // 心变契约处理
+        if (stack.getItem() instanceof HeartContractItem contractItem) {
+            InteractionResult result = contractItem.interactLivingEntity(stack, player, mob, hand);
+            if (result != InteractionResult.PASS) cir.setReturnValue(result);
+            return;
+        }
     }
 
     @Inject(method = "interactOn", at = @At("RETURN"))

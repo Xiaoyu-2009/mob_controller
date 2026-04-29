@@ -1,3 +1,7 @@
+// ============================================================
+// 源文件: C:/Users/Mnibr/Desktop/生物控制器源码/mob_controller-1.20.1-Forge/src\main\java\net\xiaoyu\mob_controller\mixin\MixinCreeperRespawn.java
+// ============================================================
+
 package net.xiaoyu.mob_controller.mixin;
 
 import net.minecraft.network.chat.Component;
@@ -23,19 +27,33 @@ public abstract class MixinCreeperRespawn {
     @Inject(method = "explodeCreeper", at = @At("HEAD"))
     private void onExplodeCreeper(CallbackInfo ci) {
         Creeper creeper = (Creeper) (Object) this;
-        if (MobControlledData.isControlledEntity(creeper) && creeper.level() instanceof ServerLevel serverLevel) {
-            // 主动获取控制者并发送复活提醒消息
-            Player controller = MobControlledData.getController(creeper, serverLevel);
-            if (controller instanceof ServerPlayer serverPlayer) {
-                int seconds = Config.RESPAWN_DELAY_TICKS.get() / 20;
-                serverPlayer.sendSystemMessage(Component.translatable(
-                        "mob_controller.message.respawn_scheduled",
-                        creeper.getDisplayName(),
-                        seconds
-                ));
+        if (!Config.ENABLE_RESPAWN.get()) {
+            // 重生禁用时，仍然向控制者显示死因（不安排重生）
+            if (MobControlledData.isControlledEntity(creeper) && creeper.level() instanceof ServerLevel serverLevel) {
+                Player controller = MobControlledData.getController(creeper, serverLevel);
+                if (controller instanceof ServerPlayer serverPlayer) {
+                    String deathCause = Component.translatable("mob_controller.death.creeper_explode").getString();
+                    serverPlayer.sendSystemMessage(Component.translatable("mob_controller.message.death_cause",
+                            creeper.getDisplayName(), deathCause));
+                }
             }
-            // 将苦力怕加入重生队列（内部会保存数据，但可能不发消息）
-            MobControlledData.scheduleRespawn(creeper, serverLevel);
+            return;
+        }
+        if (MobControlledData.isControlledEntity(creeper) && creeper.level() instanceof ServerLevel serverLevel) {
+            // 构造死因（简单处理）
+            String deathCause = Component.translatable("mob_controller.death.creeper_explode").getString();
+            if (MobControlledData.scheduleRespawn(creeper, serverLevel, deathCause)) {
+                Player controller = MobControlledData.getController(creeper, serverLevel);
+                if (controller instanceof ServerPlayer serverPlayer) {
+                    int seconds = Config.RESPAWN_DELAY_TICKS.get() / 20;
+                    serverPlayer.sendSystemMessage(Component.translatable(
+                            "mob_controller.message.respawn_scheduled_cause",
+                            creeper.getDisplayName(),
+                            deathCause,
+                            seconds
+                    ));
+                }
+            }
         }
     }
 }

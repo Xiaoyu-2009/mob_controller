@@ -24,6 +24,66 @@ public class Config {
     }
 
     /**
+     * 自定义控制规则列表。
+     * 格式：生物ID;物品ID;成功率(0~1);所需绝对血量(≤该值);是否消耗物品(true/false)
+     * 示例：minecraft:zombie;minecraft:rotten_flesh;0.5;10;true
+     */
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> CUSTOM_CONTROL_RULES = BUILDER
+            .comment(
+                    "!!! WARNING: EXPERIMENTAL TEST FEATURE - NOT GUARANTEED TO BE COMPATIBLE, MAY CAUSE GAME CRASHES OR DATA CORRUPTION !!!",
+                    "IMPORTANT WARNING 1: If the specified item already has an interaction with the mob (e.g., wheat feeding cows, bones taming wolves),",
+                    "this rule will PRIORITIZE the control logic over the original interaction. Right-clicking the mob with that item will",
+                    "attempt to control it instead of feeding/breeding/taming. Choose your items carefully.",
+                    "IMPORTANT WARNING 2: Items from this mod (namespace 'mob_controller', e.g., 'mob_controller:mob_controller') are FORBIDDEN.",
+                    "If you use such an item, the rule will be silently ignored and will NOT work.",
+                    "",
+                    "Format: 'mob_id;item_id;chance;required_health;consume'",
+                    "- mob_id: entity registry name, e.g., 'minecraft:cow'",
+                    "- item_id: item registry name, e.g., 'minecraft:wheat' (cannot be 'mob_controller:xxx')",
+                    "- chance: float 0.0-1.0, 1.0 = always succeed",
+                    "- required_health: int, mob's current health must be <= this value to be controllable",
+                    "- consume: true/false, whether to consume one item per attempt (regardless of success)",
+                    "",
+                    "Example: 'minecraft:cow;minecraft:wheat;1.0;10;true'")
+            .defineList("custom_control_rules", List.of(), obj -> obj instanceof String);
+
+    /**
+     * 水平传送触发距离（单位：格）。
+     * 当受控生物与控制者的水平距离超过此值时，强制传送回到控制者身边。
+     * 默认值：14.0。
+     */
+    public static final ForgeConfigSpec.DoubleValue FOLLOW_TELEPORT_HORIZONTAL_DISTANCE = BUILDER
+            .comment("Horizontal distance (blocks) that triggers teleportation when following. Default: 14.0")
+            .defineInRange("follow_teleport_horizontal_distance", 14.0, 1.0, 256.0);
+
+    /**
+     * 垂直传送触发距离（单位：格）。
+     * 当受控生物与控制者的垂直距离（绝对值）超过此值时，强制传送回到控制者身边。
+     * 默认值：32.0。
+     */
+    public static final ForgeConfigSpec.DoubleValue FOLLOW_TELEPORT_VERTICAL_DISTANCE = BUILDER
+            .comment("Vertical distance (blocks) that triggers teleportation when following. Default: 32.0")
+            .defineInRange("follow_teleport_vertical_distance", 32.0, 1.0, 256.0);
+
+    /**
+     * 跟随移动触发距离（单位：格）。
+     * 当受控生物与控制者的距离超过此值时，生物会主动向控制者移动（而非原地待命）。
+     * 默认值：8.0。
+     */
+    public static final ForgeConfigSpec.DoubleValue FOLLOW_MOVE_TO_DISTANCE = BUILDER
+            .comment("Distance (blocks) at which a controlled mob starts moving toward the controller when following. Default: 8.0")
+            .defineInRange("follow_move_to_distance", 8.0, 1.0, 64.0);
+
+    /**
+     * 是否启用五谷杂粮的合成表。
+     * true = 五谷杂粮可合成（生物控制器不可合成）；
+     * false = 生物控制器可合成（五谷杂粮不可合成），默认为 false。
+     */
+    public static final ForgeConfigSpec.BooleanValue USE_GRAIN_RECIPE = BUILDER
+            .comment("If true, the 'Grain' item will have a crafting recipe and the normal Inexhaustible Golden Stew will be uncraftable; if false, the opposite.")
+            .define("use_grain_recipe", true);
+
+    /**
      * 不可被控制的生物类型黑名单。
      *
      * <p>列表中的每一项均为实体注册名，格式为 {@code namespace:path}，
@@ -45,7 +105,12 @@ public class Config {
                             "minecraft:trader_llama",
                             "minecraft:skeleton_horse",
                             "minecraft:zombie_horse",
-                            "minecraft:camel"
+                            "minecraft:camel",
+                            "deep_aether:eots_segment",
+                            "deep_aether:eots_controller",
+                            "aether:sun_spirit",
+                            "aether:slider",
+                            "lost_aether_content:aerwhale_king"
                     ), obj -> obj instanceof String
             );
 
@@ -67,6 +132,40 @@ public class Config {
                             "minecraft:blaze",
                             "minecraft:phantom",
                             "minecraft:bat"
+                    ), obj -> obj instanceof String
+            );
+
+    /**
+     * 强制视为水生生物的列表（即使其原版类型不是 WATER）。
+     * 列表中每一项为实体注册名，格式 "namespace:path"。
+     * 当生物在此列表中时，传送落点一律选择水中。
+     */
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WATER_BASED_MOBS = BUILDER
+            .comment("List of mobs that should always be treated as water-based for teleportation (overrides default type check).")
+            .defineList("water_based_mobs", List.of("alexsmobs:skelewag"), obj -> obj instanceof String);
+
+    /**
+     * 强制视为陆生生物的列表（即使其原版类型是 WATER 或在两栖列表中）。
+     * 列表中每一项为实体注册名，格式 "namespace:path"。
+     * 当生物在此列表中时，传送落点一律选择陆地（空气方块）。
+     * 注意：此配置的优先级高于 water_based_mobs 和原版类型，但低于 amphibian_mobs 的特殊逻辑。
+     */
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> LAND_BASED_MOBS = BUILDER
+            .comment("List of mobs that should always be treated as land-based for teleportation (overrides default type check and water_based list).")
+            .defineList("land_based_mobs", List.of(), obj -> obj instanceof String);
+
+    /**
+     * 两栖动物生物列表（用于跟随传送时的落点决策：在水中优先）。
+     * 当控制者完全浸没在水中时，这些生物会被传送到水中安全位置。
+     * 默认包含海龟（turtle）和青蛙（frog）。
+     */
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> AMPHIBIAN_MOBS = BUILDER
+            .comment("List of amphibious mobs that prefer water when teleporting to a fully submerged controller")
+            .defineList(
+                    "amphibian_mobs", Arrays.asList(
+                            "minecraft:turtle",
+                            "minecraft:frog",
+                            "minecraft:drowned"
                     ), obj -> obj instanceof String
             );
 
@@ -111,19 +210,12 @@ public class Config {
      */
     public static final ForgeConfigSpec.IntValue RESPAWN_DELAY_TICKS = BUILDER
             .comment("The number of ticks that elapse before rebirth is triggered after the organism dies (600 ticks = 30 seconds)")
-            .defineInRange("respawn_delay_ticks", 600, 1, Integer.MAX_VALUE);
+            .defineInRange("respawn_delay_ticks", 600, 100, Integer.MAX_VALUE);
 
-    /**
-     * 史莱姆延迟重生体型策略。
-     *
-     * <p>设为 {@code true} 时，仅最小体型（size == 1）可进入延迟重生队列；
-     * 设为 {@code false} 时，仅最大体型（size >= 3）可进入延迟重生队列。</p>
-     */
-    public static final ForgeConfigSpec.BooleanValue SLIME_RESPAWN_ONLY_MIN_SIZE = BUILDER
-            .comment(
-                    "If true, only smallest slimes (size == 1) can schedule respawn; if false, only largest slime sizes (size >= 3) can schedule respawn"
-            )
-            .define("slime_respawn_only_min_size", true);
+    // 在 Config.java 中添加
+    public static final ForgeConfigSpec.BooleanValue ENABLE_RESPAWN = BUILDER
+            .comment("Enable or disable the respawn feature for controlled mobs. If false, controlled mobs will die normally without respawning.")
+            .define("enable_respawn", true);
 
     /**
      * 生物的攻击力上限。当生物的基础攻击力（属性 attack_damage）达到或超过此值时，无法被控制。
@@ -158,6 +250,14 @@ public class Config {
     public static final ForgeConfigSpec.IntValue REQUIRED_HEALTH = BUILDER
             .comment("Absolute health threshold. If current health <= this value, the mob becomes eligible for control (alternative to health_percent_threshold).")
             .defineInRange("required_health", 10, 1, Integer.MAX_VALUE);
+
+    /**
+     * 是否在直接右键切换控制模式（跟随/停留/游荡）时播放经验球拾取音效。
+     * 仅控制者本人能听见。默认值为 true。
+     */
+    public static final ForgeConfigSpec.BooleanValue PLAY_SOUND_ON_MODE_SWITCH = BUILDER
+            .comment("Whether to play the experience orb pickup sound when directly switching a controlled mob's mode (follow/stay/wander) via right-click. Only the controller hears it.")
+            .define("play_sound_on_mode_switch", true);
 
     /**
      * 已构建完成的配置规格，在 {@link MobController} 构造器中通过

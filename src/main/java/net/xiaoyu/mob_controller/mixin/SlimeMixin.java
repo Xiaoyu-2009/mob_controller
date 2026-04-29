@@ -26,15 +26,18 @@ public abstract class SlimeMixin {
      * 注入 {@code remove} 分裂流程：将新分裂史莱姆继承为同控制者受控状态。
      */
     @Inject(
-        method = "remove(Lnet/minecraft/world/entity/Entity$RemovalReason;)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/Slime;moveTo(DDDFF)V")
+            method = "remove(Lnet/minecraft/world/entity/Entity$RemovalReason;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/monster/Slime;moveTo(DDDFF)V")
     )
     private void injectRemove(Entity.RemovalReason reason, CallbackInfo ci, @Local Slime slime) {
         Mob mob = (Mob) (Object) this;
-        if (MobControlledData.isControlledEntity(mob)) {
+        // 仅当原实体受控且不是分裂子代时，才将分裂产生的个体添加为受控
+        if (MobControlledData.isControlledEntity(mob) && !MobControlledData.isSplitOffspring(mob)) {
             UUID controllerUUID = MobControlledData.getControllerUUID(mob);
             if (controllerUUID != null) {
+                // 将新个体添加为受控，但标记为分裂子代
                 MobControlledData.addControlledMob(controllerUUID, slime);
+                MobControlledData.setSplitOffspring(slime, true);
             }
         }
     }

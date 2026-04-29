@@ -7,7 +7,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
-import net.xiaoyu.mob_controller.entity.EntityControlledWitch;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.spongepowered.asm.mixin.Mixin;
@@ -39,7 +38,6 @@ public abstract class MixinNearestAttackableTargetGoal {
     ) {
         Predicate<LivingEntity> predicate = customPredicate != null ? customPredicate : livingEntity -> true;
         predicate = predicate.and(livingEntity -> !MobControlledData.isControlledEntity(mob)
-                                                || (mob instanceof EntityControlledWitch)
                                                 || MobControlUtil.canKeepCombatTarget(mob, livingEntity));
         return original.call(instance, predicate);
     }

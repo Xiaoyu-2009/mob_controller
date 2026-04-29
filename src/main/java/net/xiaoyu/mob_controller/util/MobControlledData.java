@@ -1,6 +1,7 @@
 package net.xiaoyu.mob_controller.util;
 
 import com.mojang.authlib.GameProfile;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -14,23 +15,35 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.GameProfileCache;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.Slime;
+import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.animal.Panda;
+import net.minecraft.world.entity.monster.warden.Warden;
+import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.capability.MobControlCapability;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
+import net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket;
+import net.xiaoyu.mob_controller.network.NetWorkManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -40,6 +53,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 维护“被控制生物”的运行时数据与全局辅助逻辑。
@@ -48,7 +62,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <ul>
  *   <li>记录玩家已控制的高生命值生物类型，限制同类重复控制；</li>
  *   <li>读写生物控制状态（控制者、模式、系统攻击标记、索敌模式标记）；</li>
- *   <li>安排并处理生物死亡后的延迟重生。</li>
+ *   <li>安排并处理生物死亡后的延迟重生（同时记录死因）。</li>
  * </ul>
  */
 public class MobControlledData {
@@ -67,12 +81,17 @@ public class MobControlledData {
     private static Path loadedPendingRespawnFile;
 
     /**
+     * 受批量控制指令影响的生物发光持续时间（刻）。
+     */
+    private static final int AFFECTED_MOB_GLOWING_TICKS = 100;
+
+    /**
      * 将生物加入控制状态，并初始化为“跟随”模式。
      *
      * @param controllerUUID 控制者玩家 UUID
      * @param mob            目标生物
      */
-    public static void addControlledMob(UUID controllerUUID, Mob mob) {
+    public static void addControlledMob(UUID controllerUUID, Mob mob, boolean setPersistent) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> {
             cap.setControllerUUID(controllerUUID);
@@ -80,17 +99,25 @@ public class MobControlledData {
             cap.setLastHealTime(0L);
             cap.setLastCombatTime(0L);
             cap.setSystemAttack(false);
-            cap.setAggressiveMode(false); // 默认护主模式
+            cap.setAggressiveMode(false);
         });
 
-        // 不会自己消失//捡起物品
-        mob.setPersistenceRequired();
+        if (setPersistent) {
+            mob.setPersistenceRequired();
+        }
         if (!(mob instanceof Panda) && !(mob instanceof Piglin)) {
             mob.setCanPickUpLoot(false);
         }
 
         addHighHealthRecord(controllerUUID, mob);
     }
+
+    // 修改原有方法，调用重载版本
+    public static void addControlledMob(UUID controllerUUID, Mob mob) {
+        addControlledMob(controllerUUID, mob, true);
+    }
+
+
 
     /**
      * 释放对生物的控制并清理相关标记。
@@ -114,8 +141,19 @@ public class MobControlledData {
             cap.setAggressiveMode(false);
         });
 
+        if (mob instanceof Raider raider && !(mob instanceof Witch)) {
+            MobControlUtil.restoreRaiderTargets(raider);
+        }
+        if (mob instanceof Witch witch) {
+            MobControlUtil.restoreWitchTargets(witch);
+        }
+
         removeHighHealthRecord(controllerUUID, mob);
         return capability.isPresent();
+    }
+
+    private static void resetWitchToVanilla(Witch witch) {
+        witch.getPersistentData().remove("mob_controller.supportCooldown");
     }
 
     private static boolean isHighHealthMob(Mob mob) {
@@ -386,7 +424,7 @@ public class MobControlledData {
         return capability.map(MobControlCapability::isSystemAttack).orElse(false);
     }
 
-    // ========== 索敌模式相关方法（新增） ==========
+    // ========== 索敌模式相关方法 ==========
 
     /**
      * 获取生物的索敌模式状态。
@@ -412,6 +450,7 @@ public class MobControlledData {
 
     /**
      * 批量设置玩家周围指定半径内所有受控生物的索敌模式。
+     * <p>受影响的生物会获得短暂的发光效果（持续 100 tick），与控制令的行为一致。</p>
      *
      * @param player     操作玩家
      * @param radius     半径（方块）
@@ -432,30 +471,39 @@ public class MobControlledData {
         for (Mob mob : controlledMobs) {
             setAggressiveMode(mob, aggressive);
             mob.setTarget(null); // 清除当前目标，避免残留仇恨
+            // 添加发光效果，与“控制令”行为保持一致
+            mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, AFFECTED_MOB_GLOWING_TICKS));
         }
         return controlledMobs.size();
     }
 
-    // ========== 原有重生与持久化代码（未修改） ==========
+    // ========== 召唤物标记 ==========
+    public static boolean isSummoned(Mob mob) {
+        return mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+                .map(MobControlCapability::isSummoned).orElse(false);
+    }
+
+    // ========== 重生相关方法 ==========
 
     /**
-     * 为死亡生物创建延迟重生任务。
+     * 为死亡生物创建延迟重生任务（新版本，支持死因）。
      *
      * <p>会保存实体 NBT 与能力 NBT，在 {@link #tickPendingRespawns(MinecraftServer)} 中恢复。</p>
      *
-     * @param mob   死亡生物
-     * @param level 当前服务端世界
+     * @param mob        死亡生物
+     * @param level      当前服务端世界
+     * @param deathCause 死因描述文本（纯文本，不包含生物名称）
      * @return {@code true} 表示成功加入待重生队列
      */
-    public static boolean scheduleRespawn(Mob mob, ServerLevel level) {
+    public static boolean scheduleRespawn(Mob mob, ServerLevel level, String deathCause) {
+        if (isSummoned(mob)) {
+            return false;   // 召唤物不重生
+        }
         MinecraftServer server = level.getServer();
         ensurePendingRespawnsLoaded(server);
 
-        if (mob instanceof Slime slime && !(mob instanceof MagmaCube)) {
-            boolean onlyMinSize = Config.SLIME_RESPAWN_ONLY_MIN_SIZE.get();
-            int slimeSize = slime.getSize();
-
-            if (onlyMinSize ? slimeSize > 1 : slimeSize < 3) {
+        if (mob instanceof Slime slime) {
+            if (MobControlledData.isSplitOffspring(mob)) {
                 return false;
             }
         }
@@ -485,7 +533,8 @@ public class MobControlledData {
                         level.dimension(),
                         mob.blockPosition(),
                         mobTypeId,
-                        highHealthMob
+                        highHealthMob,
+                        deathCause != null ? deathCause : ""
                 )
         );
         savePendingRespawns(server);
@@ -537,11 +586,18 @@ public class MobControlledData {
                 respawnedMob.setHealth(respawnedMob.getMaxHealth());
                 respawnedMob.setTarget(null);
                 targetLevel.addFreshEntity(respawnedMob);
+                respawnedMob.fallDistance = 0.0f;
+
+                if (MobControlledData.isControlledEntity(respawnedMob) && respawnedMob instanceof Warden) {
+                    respawnedMob.getPersistentData().putBoolean("mob_controller:respawned", true);
+                }
 
                 addControlledMob(data.controllerUUID(), respawnedMob);
                 respawnedMob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
                         .ifPresent(cap -> cap.deserializeNBT(data.capabilityNbt().copy()));
                 clearSystemAttack(respawnedMob);
+
+                MobControlUtil.clearCombatMemory(respawnedMob);
 
                 if (controller != null) {
                     controller.sendSystemMessage(Component.translatable("mob_controller.message.respawned", respawnedMob.getDisplayName()));
@@ -605,6 +661,7 @@ public class MobControlledData {
                 int remainingTicks = Math.max(0, respawnTag.getInt("remainingTicks"));
                 ResourceKey<Level> deathDimension = ResourceKey.create(Registries.DIMENSION, dimensionLocation);
                 BlockPos deathPos = BlockPos.of(respawnTag.getLong("deathPos"));
+                String deathCause = respawnTag.getString("deathCause");
 
                 PENDING_RESPAWNS.put(
                         deadMobUUID,
@@ -617,7 +674,8 @@ public class MobControlledData {
                                 deathDimension,
                                 deathPos,
                                 respawnTag.getString("mobTypeId"),
-                                respawnTag.getBoolean("highHealthMob")
+                                respawnTag.getBoolean("highHealthMob"),
+                                deathCause
                         )
                 );
             }
@@ -645,6 +703,7 @@ public class MobControlledData {
                 respawnTag.putLong("deathPos", data.deathPos().asLong());
                 respawnTag.putString("mobTypeId", data.mobTypeId());
                 respawnTag.putBoolean("highHealthMob", data.highHealthMob());
+                respawnTag.putString("deathCause", data.deathCause());
                 pendingList.add(respawnTag);
             }
 
@@ -655,6 +714,17 @@ public class MobControlledData {
             }
         } catch (IOException ignored) {
         }
+    }
+
+    public static boolean isSplitOffspring(Mob mob) {
+        return mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+                .map(MobControlCapability::isSplitOffspring)
+                .orElse(false);
+    }
+
+    public static void setSplitOffspring(Mob mob, boolean value) {
+        mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+                .ifPresent(cap -> cap.setSplitOffspring(value));
     }
 
     /**
@@ -675,13 +745,77 @@ public class MobControlledData {
         WANDER,
     }
 
+    /**
+     * 待重生数据记录。
+     *
+     * @param deadMobUUID      死亡生物 UUID
+     * @param controllerUUID   控制者 UUID
+     * @param entityNbt        实体完整 NBT
+     * @param capabilityNbt    能力 NBT
+     * @param triggerTick      触发重生的服务端 tick 值
+     * @param deathDimension   死亡时所在维度
+     * @param deathPos         死亡位置
+     * @param mobTypeId        实体类型注册 ID
+     * @param highHealthMob    是否为高生命值生物
+     * @param deathCause       死因描述（纯文本，不含生物名）
+     */
     private record PendingRespawnData(
             UUID deadMobUUID, UUID controllerUUID, CompoundTag entityNbt,
             CompoundTag capabilityNbt, int triggerTick,
             ResourceKey<Level> deathDimension,
             BlockPos deathPos,
             String mobTypeId,
-            boolean highHealthMob
+            boolean highHealthMob,
+            String deathCause
     ) {
+    }
+
+    /**
+     * 单体切换生物的索敌模式
+     *
+     * @param player     执行操作的玩家
+     * @param mob        目标生物
+     * @param aggressive 目标模式（true=索敌，false=护主）
+     * @return 是否切换成功
+     */
+    public static boolean setSingleAggressiveMode(Player player, Mob mob, boolean aggressive) {
+        if (!isControlledEntity(mob)) {
+            player.displayClientMessage(Component.translatable("mob_controller.message.not_controlled").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+
+        if (!player.getUUID().equals(getControllerUUID(mob))) {
+            player.displayClientMessage(Component.translatable("mob_controller.message.not_owner").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+
+        // 切换模式
+        setAggressiveMode(mob, aggressive);
+
+        // 清除当前目标，避免残留仇恨
+        mob.setTarget(null);
+
+        // 同步能力数据到客户端
+        if (player instanceof ServerPlayer serverPlayer) {
+            mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+                    .ifPresent(cap -> {
+                        NetWorkManager.INSTANCE.send(
+                                PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> mob),
+                                new MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT())
+                        );
+                    });
+        }
+
+        // 发送反馈消息
+        String modeKey = aggressive ? "mob_controller.mode.aggressive" : "mob_controller.mode.protective";
+        player.displayClientMessage(
+                Component.translatable("mob_controller.message.single_switch",
+                                mob.getDisplayName(),
+                                Component.translatable(modeKey))
+                        .withStyle(ChatFormatting.GOLD),
+                true
+        );
+
+        return true;
     }
 }

@@ -1,6 +1,7 @@
 package net.xiaoyu.mob_controller.network.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.NetworkDirection;
@@ -23,4 +24,16 @@ public class ClientPacketHandler {
             mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> cap.deserializeNBT(packet.entityCap()));
         }
     }
+
+    public static void handlePlaySound(Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.05F, 1.0F);
+            }
+        });
+        ctx.get().setPacketHandled(true);
+    }
 }
+
+

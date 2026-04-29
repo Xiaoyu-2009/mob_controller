@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 import net.xiaoyu.mob_controller.item.MobControllerItem;
 import net.xiaoyu.mob_controller.registry.ModItems;
+import net.xiaoyu.mob_controller.registry.ModSounds;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
@@ -52,13 +53,14 @@ public record ApplyControlCommandPacket(MobControlledData.ControlMode mode) {
             }
 
             int affectedCount = MobControllerItem.applyControlCommand(player, this.mode());
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.CONTROL_COMMAND_USE.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.2f, 1.0f);
             String modeKey = "mob_controller.mode." + this.mode().toString().toLowerCase();
             MobControlUtil.showMessageToPlayer(
-                player,
-                Component.literal("[" + affectedCount + "]"),
-                modeKey,
-                new Object[]{},
-                ChatFormatting.GOLD
+                    player,
+                    Component.literal("[" + affectedCount + "]"),
+                    modeKey,
+                    new Object[]{},
+                    ChatFormatting.GOLD
             );
         });
         ctx.get().setPacketHandled(true);
