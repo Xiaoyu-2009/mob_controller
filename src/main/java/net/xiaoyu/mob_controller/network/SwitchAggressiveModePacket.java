@@ -41,12 +41,6 @@ public record SwitchAggressiveModePacket(boolean aggressive, int targetEntityId)
             // 批量切换模式
             if (targetEntityId == -1) {
                 int affectedCount = MobControlledData.setAggressiveModeForAll(player, 32, aggressive);
-                if (affectedCount == 0) {
-                    player.displayClientMessage(Component.translatable("mob_controller.message.no_controlled_mobs_nearby")
-                            .withStyle(ChatFormatting.RED), true);
-                    return;
-                }
-                // 🎵 批量切换成功时播放声音
                 player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.AGGRESSIVE_SWITCH_BATCH.get(), net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 1.0f);
                 String modeKey = aggressive ? "mob_controller.mode.aggressive" : "mob_controller.mode.protective";
                 MobControlUtil.showMessageToPlayer(player, Component.literal("[" + affectedCount + "]"),

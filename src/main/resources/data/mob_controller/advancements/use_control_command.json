@@ -1,0 +1,26 @@
+{
+  "display": {
+    "icon": {
+      "item": "mob_controller:control_command"
+    },
+    "title": {
+      "translate": "advancements.mob_controller.use_control_command.title"
+    },
+    "description": {
+      "translate": "advancements.mob_controller.use_control_command.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "mob_controller:first_companion",
+  "criteria": {
+    "use_command": {
+      "trigger": "mob_controller:use_control_command"
+    }
+  },
+  "rewards": {
+    "experience": 30
+  }
+}

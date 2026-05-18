@@ -1,16 +1,24 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    {
-      "item": "minecraft:wooden_sword"
-    },
-    {
-      "item": "minecraft:shield"
-    },
-    {
-      "item": "minecraft:blue_dye"
-    }
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GWG",
+    "RHR",
+    "GWG"
   ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "W": {
+      "item": "minecraft:white_dye"
+    },
+    "H": {
+      "item": "minecraft:goat_horn"
+    },
+    "R": {
+      "item": "minecraft:red_wool"
+    }
+  },
   "result": {
     "item": "mob_controller:aggressive_switch",
     "count": 1

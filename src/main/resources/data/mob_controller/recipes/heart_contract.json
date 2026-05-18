@@ -1,22 +1,25 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "LIL",
-    "EPE",
-    "LIL"
+    " W ",
+    "ACF",
+    " S "
   ],
   "key": {
-    "L": {
-      "item": "minecraft:lapis_lazuli"
+    "W": {
+      "item": "minecraft:wither_rose"
     },
-    "I": {
-      "item": "minecraft:iron_ingot"
+    "F": {
+      "item": "minecraft:fermented_spider_eye"
     },
-    "P": {
-      "item": "minecraft:milk_bucket"
+    "C": {
+      "item": "minecraft:suspicious_stew"
     },
-    "E": {
-      "item": "minecraft:paper"
+    "S": {
+      "item": "minecraft:slime_ball"
+    },
+    "A": {
+      "item": "minecraft:rotten_flesh"
     }
   },
   "result": {

@@ -1,0 +1,14 @@
+{
+  "control_command_use": {
+    "sounds": [
+      "mob_controller:control_command_use"
+    ],
+    "subtitle": "mob_controller.subtitle.control_command_use"
+  },
+  "aggressive_switch_batch": {
+    "sounds": [
+      "mob_controller:aggressive_switch_batch"
+    ],
+    "subtitle": "mob_controller.subtitle.aggressive_switch_batch"
+  }
+}

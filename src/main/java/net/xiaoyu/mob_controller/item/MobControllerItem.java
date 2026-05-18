@@ -74,9 +74,7 @@ public class MobControllerItem extends Item {
 
             // 如果生物有自定义规则且当前物品不匹配，禁止控制
             if (CustomControlHandler.hasCustomRule(mob) && !CustomControlHandler.isMatchingCustomItem(mob, stack.getItem())) {
-                if (!player.level().isClientSide) {
-                    spawnParticles(mob, false);
-                }
+                MobControlUtil.spawnControlParticles(mob, false);
                 return InteractionResult.FAIL;
             }
 
@@ -85,54 +83,21 @@ public class MobControllerItem extends Item {
             if (MobControlledData.isControlledEntity(mob)) return InteractionResult.PASS;
 
             boolean alwaysSuccess = Config.ALWAYS_SUCCESS.get();
-            // 攻击力限制
-            if (!alwaysSuccess) {
-                AttributeInstance attackAttr = mob.getAttribute(Attributes.ATTACK_DAMAGE);
-                double attackDamage = attackAttr != null ? attackAttr.getValue() : 0.0;
-                if (attackDamage >= Config.ATTACK_LIMIT.get()) {
-                    spawnParticles(mob, false);
-                    return InteractionResult.FAIL;
-                }
-            }
-            // 生命上限限制
-            if (!alwaysSuccess) {
-                float maxHealth = mob.getMaxHealth();
-                if (maxHealth >= Config.HEALTH_LIMIT.get()) {
-                    spawnParticles(mob, false);
-                    return InteractionResult.FAIL;
-                }
-            }
-            // 生命值条件
-            if (!alwaysSuccess) {
-                float currentHealth = mob.getHealth();
-                float maxHealth = mob.getMaxHealth();
-                boolean healthConditionMet = (currentHealth <= Config.REQUIRED_HEALTH.get()) ||
-                        ((currentHealth / maxHealth) * 100.0 <= Config.HEALTH_PERCENT_THRESHOLD.get());
-                if (!healthConditionMet) {
-                    spawnParticles(mob, false);
-                    return InteractionResult.FAIL;
-                }
-            }
-            // 黑名单／已有主人
-            if (Config.BLACKLISTED_MOBS.get().contains(EntityType.getKey(mob.getType()).toString()) || hasOwnerOrTameTag(mob)) {
-                spawnParticles(mob, false);
-                return InteractionResult.FAIL;
-            }
-            // 高生命值同类限制
-            if (MobControlledData.hasPlayerControlledSameHighHealthMob(player.getUUID(), mob)) {
-                spawnParticles(mob, false);
+            // 使用统一的条件检查
+            if (!MobControlUtil.canBeControlled(mob, player, alwaysSuccess)) {
+                MobControlUtil.spawnControlParticles(mob, false);
                 return InteractionResult.FAIL;
             }
 
-            float controlChance = alwaysSuccess ? 1.0f : calculateControlChance(mob);
+            float controlChance = alwaysSuccess ? 1.0f : MobControlUtil.calculateControlChance(mob);
             if (level.random.nextFloat() <= controlChance) {
                 mob.setTarget(null);
-                controlMob(player, mob);
+                MobControlUtil.performControlMob(player, mob);
                 MobControlUtil.showMessageToPlayer(player, mob.getDisplayName(), "mob_controller.mode.follow", new Object[]{}, ChatFormatting.GOLD);
-                spawnParticles(mob, true);
+                MobControlUtil.spawnControlParticles(mob, true);
                 return InteractionResult.SUCCESS;
             } else {
-                spawnParticles(mob, false);
+                MobControlUtil.spawnControlParticles(mob, false);
                 return InteractionResult.FAIL;
             }
         }
@@ -164,52 +129,6 @@ public class MobControllerItem extends Item {
                     SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 0.5F, level.random.nextFloat() * 0.1F + 0.9F);
         }
         return stack;
-    }
-
-    // 辅助方法
-    private boolean hasOwnerOrTameTag(Mob mob) {
-        if (mob instanceof TamableAnimal tamable && tamable.isTame()) return true;
-        CompoundTag nbt = mob.saveWithoutId(new CompoundTag());
-        if (nbt.contains("Owner") || nbt.contains("OwnerUUID")) return true;
-        return nbt.contains("Tame") && nbt.getBoolean("Tame");
-    }
-
-    protected float calculateControlChance(Mob mob) {
-        if (mob instanceof TamableAnimal tamable && tamable.isTame()) return 0.0f;
-        float maxHealth = mob.getMaxHealth();
-        if (maxHealth <= 50) return 1.0f;
-        float extraHealth = maxHealth - 50;
-        int segments = (int) (extraHealth / 50);
-        float reduction = segments * 0.2f;
-        return Math.max(1.0f - reduction, 0.2f);
-    }
-
-    protected void controlMob(Player player, Mob mob) {
-        if (mob instanceof Raider raider) {
-            Raid raid = raider.getCurrentRaid();
-            if (raid != null) raid.removeFromRaid(raider, true);
-        }
-        MobControlledData.addControlledMob(player.getUUID(), mob);
-        if (!mob.level().isClientSide) {
-            for (Entity entity : mob.level().getEntitiesOfClass(Entity.class, mob.getBoundingBox().inflate(32.0))) {
-                if (entity instanceof Mob oldMob && MobControlledData.isControlledEntity(oldMob)) {
-                    if (oldMob.getTarget() != null && oldMob.getTarget().is(mob)) oldMob.setTarget(null);
-                    if (mob.getTarget() != null && mob.getTarget().is(oldMob)) mob.setTarget(null);
-                }
-            }
-        }
-    }
-
-    protected void spawnParticles(Mob mob, boolean success) {
-        if (mob.level().isClientSide) return;
-        ServerLevel serverLevel = (ServerLevel) mob.level();
-        if (success) {
-            serverLevel.sendParticles(ParticleTypes.HEART, mob.getX(), mob.getY() + mob.getBbHeight(), mob.getZ(),
-                    7, 0.5, 0.5, 0.5, 0.1);
-        } else {
-            serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, mob.getX(), mob.getY() + mob.getBbHeight(), mob.getZ(),
-                    7, 0.5, 0.5, 0.5, 0.1);
-        }
     }
 
     @Override

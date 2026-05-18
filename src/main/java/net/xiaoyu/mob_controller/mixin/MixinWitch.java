@@ -121,7 +121,7 @@ public abstract class MixinWitch {
     private boolean needsHealing(LivingEntity e) {
         float health = e.getHealth();
         float maxHealth = e.getMaxHealth();
-        return health <= Math.max(4.0F, maxHealth * 0.4F);
+        return health < maxHealth * 0.5F;
     }
 
     /**
@@ -135,6 +135,7 @@ public abstract class MixinWitch {
 
     /**
      * 向友方投掷支援药水（抗火 / 再生 / 特殊治疗）。
+     * 改进：瞄准目标脚底并预测移动，提高命中率。
      */
     @Unique
     private void throwSupportPotion(Witch witch, LivingEntity target) {
@@ -143,7 +144,7 @@ public abstract class MixinWitch {
             potion = Potions.LONG_FIRE_RESISTANCE;
         } else if (needsHealing(target)) {
             if (target.getHealth() <= 4.0F || target.hasEffect(MobEffects.REGENERATION)) {
-                potion = ModEffects.SPECIAL_HEALING.get(); // 瞬间大治疗
+                potion = ModEffects.SPECIAL_HEALING.get();
             } else {
                 potion = Potions.REGENERATION;
             }
@@ -153,14 +154,22 @@ public abstract class MixinWitch {
 
         ThrownPotion thrownpotion = new ThrownPotion(witch.level(), witch);
         thrownpotion.setItem(PotionUtils.setPotion(new ItemStack(Items.SPLASH_POTION), potion));
-        double d0 = target.getX() - witch.getX();
-        double d1 = target.getEyeY() - 1.1F - witch.getY();
-        double d2 = target.getZ() - witch.getZ();
+
+        // 预测目标移动速度，补偿提前量
+        Vec3 targetVelocity = target.getDeltaMovement();
+        double d0 = target.getX() + targetVelocity.x - witch.getX();
+        double targetY = target.getY() + 0.2;  // 瞄准脚底稍高位置，确保溅射覆盖
+        double d1 = targetY - witch.getY();
+        double d2 = target.getZ() + targetVelocity.z - witch.getZ();
         double d3 = Math.sqrt(d0 * d0 + d2 * d2);
+
+        // 投掷参数与原版一致：速度0.75，散射8.0
         thrownpotion.shoot(d0, d1 + d3 * 0.2D, d2, 0.75F, 8.0F);
+
         if (!witch.isSilent()) {
             witch.level().playSound(null, witch.getX(), witch.getY(), witch.getZ(),
-                    SoundEvents.WITCH_THROW, witch.getSoundSource(), 1.0F, 0.8F + witch.getRandom().nextFloat() * 0.4F);
+                    SoundEvents.WITCH_THROW, witch.getSoundSource(), 1.0F,
+                    0.8F + witch.getRandom().nextFloat() * 0.4F);
         }
         witch.level().addFreshEntity(thrownpotion);
     }

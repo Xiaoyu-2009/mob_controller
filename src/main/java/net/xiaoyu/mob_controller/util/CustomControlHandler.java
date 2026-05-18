@@ -20,28 +20,39 @@ import net.xiaoyu.mob_controller.rule.CustomControlRule;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CustomControlHandler {
 
-    private static final Map<ResourceLocation, Map<ResourceLocation, CustomControlRule>> RULE_CACHE = new HashMap<>();
-    private static boolean cacheInitialized = false;
+    private static final Map<ResourceLocation, Map<ResourceLocation, CustomControlRule>> RULE_CACHE = new ConcurrentHashMap<>();
+    private static volatile boolean cacheInitialized = false;
 
     private static void ensureCache() {
         if (cacheInitialized) return;
-        RULE_CACHE.clear();
-        for (String ruleStr : Config.CUSTOM_CONTROL_RULES.get()) {
-            try {
-                CustomControlRule rule = CustomControlRule.parse(ruleStr);
-                // 禁止使用本模组的物品作为自定义规则物品（静默跳过）
-                if (rule.itemId().getNamespace().equals("mob_controller")) {
-                    continue;
+        synchronized (CustomControlHandler.class) {
+            if (cacheInitialized) return;
+            RULE_CACHE.clear();
+            for (String ruleStr : Config.CUSTOM_CONTROL_RULES.get()) {
+                try {
+                    CustomControlRule rule = CustomControlRule.parse(ruleStr);
+                    // 禁止使用本模组的物品作为自定义规则物品
+                    if (rule.itemId().getNamespace().equals("mob_controller")) {
+                        continue;
+                    }
+                    RULE_CACHE.computeIfAbsent(rule.mobId(), k -> new ConcurrentHashMap<>())
+                            .put(rule.itemId(), rule);
+                } catch (IllegalArgumentException e) {
+                    // 静默跳过无效规则
                 }
-                RULE_CACHE.computeIfAbsent(rule.mobId(), k -> new HashMap<>())
-                        .put(rule.itemId(), rule);
-            } catch (IllegalArgumentException e) {
             }
+            cacheInitialized = true;
         }
-        cacheInitialized = true;
+    }
+
+    // 配置重载时重置缓存
+    public static void resetCache() {
+        cacheInitialized = false;
+        RULE_CACHE.clear();
     }
 
     @Nullable
@@ -65,6 +76,15 @@ public class CustomControlHandler {
         return getRule(mob, item) != null;
     }
 
+    /**
+     * 处理自定义控制规则。
+     *
+     * @param player 使用物品的玩家
+     * @param mob    目标生物
+     * @param stack  使用的物品栈
+     * @param hand   交互手
+     * @return 处理结果
+     */
     public static InteractionResult handleCustomControl(Player player, Mob mob, ItemStack stack, InteractionHand hand) {
         Item item = stack.getItem();
         CustomControlRule rule = getRule(mob, item);
@@ -79,6 +99,12 @@ public class CustomControlHandler {
         // 已被控制的生物直接放行，交给原物品交互
         if (MobControlledData.isControlledEntity(mob)) {
             return InteractionResult.PASS;
+        }
+
+        // 如果生物已有主人或是已被驯服的宠物，则禁止通过自定义规则控制，且不消耗物品
+        if (MobControlUtil.hasOwnerOrTameTag(mob)) {
+            spawnParticles(mob, false);  // 播放失败粒子（厌烦粒子）
+            return InteractionResult.FAIL;
         }
 
         // 全局攻击力/生命上限检查

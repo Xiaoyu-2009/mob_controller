@@ -37,7 +37,7 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
         Mob mob = (Mob) (Object) this;
-        
+
         // 不会进行转换的被控制生物
         if (MobControlledData.isControlledEntity(mob)) {
             // 猪灵/疣猪兽=僵尸猪灵/僵尸疣猪兽
@@ -140,19 +140,22 @@ public abstract class MixinMob extends LivingEntity implements Targeting {
             }
         }
     }
-    
+
     /**
-     * 注入 {@code getControllingPassenger} 返回点：允许控制者作为骑乘操作者。
+     * 注入 {@code getControllingPassenger} 返回点：仅当生物在骑乘配置列表中时，
+     * 才允许控制者作为骑乘操作者。
      */
     @Inject(method = "getControllingPassenger()Lnet/minecraft/world/entity/LivingEntity;", at = @At("RETURN"), cancellable = true)
     private void injectGetControllingPassenger(CallbackInfoReturnable<LivingEntity> cir) {
         Object thiz = this;
         if (thiz instanceof Mob mob) {
-            Entity entity = this.getFirstPassenger();
-            if (entity != null && MobControlledData.isControlledEntity(mob) && MobControlledData.getControllerUUID(mob)
-                .equals(entity.getUUID())) {
-                if (entity instanceof LivingEntity living) {
-                    cir.setReturnValue(living);
+            if (MobControlUtil.isDirectRideableControlledMob(mob)) {
+                Entity entity = this.getFirstPassenger();
+                if (entity != null && MobControlledData.isControlledEntity(mob) && MobControlledData.getControllerUUID(mob)
+                        .equals(entity.getUUID())) {
+                    if (entity instanceof LivingEntity living) {
+                        cir.setReturnValue(living);
+                    }
                 }
             }
         }

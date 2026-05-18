@@ -4,7 +4,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
+import net.xiaoyu.mob_controller.MobController;
+import net.xiaoyu.mob_controller.advancement.MobControllerTriggers;
 import net.xiaoyu.mob_controller.item.MobControllerItem;
 import net.xiaoyu.mob_controller.registry.ModItems;
 import net.xiaoyu.mob_controller.registry.ModSounds;
@@ -18,7 +21,6 @@ import java.util.function.Supplier;
  *
  * <p>用于请求将玩家周围已控制生物批量切换到指定控制模式。</p>
  */
-
 public record ApplyControlCommandPacket(MobControlledData.ControlMode mode) {
     /**
      * 从网络缓冲区反序列化数据包。
@@ -48,7 +50,9 @@ public record ApplyControlCommandPacket(MobControlledData.ControlMode mode) {
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
-            if (player == null || !player.getMainHandItem().is(ModItems.CONTROL_COMMAND_ITEM.get())) {
+            if (player == null) return;
+            ItemStack mainHand = player.getMainHandItem();
+            if (!mainHand.is(ModItems.CONTROL_COMMAND_ITEM.get()) && !mainHand.is(ModItems.MODE_SELECT_CONTROL_COMMAND_ITEM.get())) {
                 return;
             }
 
@@ -62,8 +66,12 @@ public record ApplyControlCommandPacket(MobControlledData.ControlMode mode) {
                     new Object[]{},
                     ChatFormatting.GOLD
             );
+            // 成就触发：使用控制令
+            if (affectedCount >= 1) {
+                MobControllerTriggers.USE_CONTROL_COMMAND.trigger(player);
+                MobController.grantRootAdvancementIfNeeded(player);
+            }
         });
         ctx.get().setPacketHandled(true);
     }
 }
-

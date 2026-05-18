@@ -21,12 +21,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Witch;
+import net.minecraft.world.entity.monster.Zoglin;
+import net.minecraft.world.entity.monster.hoglin.Hoglin;
+import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.entity.animal.Panda;
 import net.minecraft.world.entity.monster.warden.Warden;
@@ -42,6 +47,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.capability.MobControlCapability;
 import net.xiaoyu.mob_controller.capability.MobControlCapabilityProvider;
+import net.xiaoyu.mob_controller.item.LegionBannerItem;
 import net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket;
 import net.xiaoyu.mob_controller.network.NetWorkManager;
 import org.jetbrains.annotations.Nullable;
@@ -67,10 +73,6 @@ import java.util.stream.Collectors;
  */
 public class MobControlledData {
     /**
-     * 玩家 -> 已控制的高生命值生物类型计数。
-     */
-    private static final Map<UUID, Map<EntityType<?>, Integer>> PLAYER_CONTROLLED_HIGH_HEALTH_MOBS = new ConcurrentHashMap<>();
-    /**
      * 待执行的延迟重生任务。键为死亡生物 UUID。
      */
     private static final Map<UUID, PendingRespawnData> PENDING_RESPAWNS = new ConcurrentHashMap<>();
@@ -91,7 +93,7 @@ public class MobControlledData {
      * @param controllerUUID 控制者玩家 UUID
      * @param mob            目标生物
      */
-    public static void addControlledMob(UUID controllerUUID, Mob mob, boolean setPersistent) {
+    public static void addControlledMob(UUID controllerUUID, Mob mob, boolean setPersistent, boolean skipHighHealthRecord) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> {
             cap.setControllerUUID(controllerUUID);
@@ -109,12 +111,18 @@ public class MobControlledData {
             mob.setCanPickUpLoot(false);
         }
 
-        addHighHealthRecord(controllerUUID, mob);
+        if (!skipHighHealthRecord) {
+            addHighHealthRecord(controllerUUID, mob);
+        }
     }
 
-    // 修改原有方法，调用重载版本
+    // 原有的双参数方法保持兼容，默认不跳过记录
+    public static void addControlledMob(UUID controllerUUID, Mob mob, boolean setPersistent) {
+        addControlledMob(controllerUUID, mob, setPersistent, false);
+    }
+
     public static void addControlledMob(UUID controllerUUID, Mob mob) {
-        addControlledMob(controllerUUID, mob, true);
+        addControlledMob(controllerUUID, mob, true, false);
     }
 
 
@@ -131,6 +139,8 @@ public class MobControlledData {
             return false;
         }
 
+        setLegionMode(mob, false);
+
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
         capability.ifPresent(cap -> {
             cap.setControllerUUID(null);
@@ -140,6 +150,15 @@ public class MobControlledData {
             cap.setSystemAttack(false);
             cap.setAggressiveMode(false);
         });
+
+        if (!mob.level().isClientSide) {
+            capability.ifPresent(cap -> {
+                NetWorkManager.INSTANCE.send(
+                        net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> mob),
+                        new net.xiaoyu.mob_controller.network.MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT())
+                );
+            });
+        }
 
         if (mob instanceof Raider raider && !(mob instanceof Witch)) {
             MobControlUtil.restoreRaiderTargets(raider);
@@ -156,7 +175,7 @@ public class MobControlledData {
         witch.getPersistentData().remove("mob_controller.supportCooldown");
     }
 
-    private static boolean isHighHealthMob(Mob mob) {
+    public static boolean isHighHealthMob(Mob mob) {
         return mob.getMaxHealth() > Config.HIGH_HEALTH_THRESHOLD.get();
     }
 
@@ -168,15 +187,19 @@ public class MobControlledData {
      * @return 若目标为高生命值生物且该玩家已控制同类型生物则返回 {@code true}
      */
     public static boolean hasPlayerControlledSameHighHealthMob(UUID playerUUID, Mob mob) {
-        if (!isHighHealthMob(mob)) {
+        String typeId = EntityType.getKey(mob.getType()).toString();
+        int customMax = MobControlUtil.getCustomMaxCount(mob);
+        if (customMax >= 0) {
+            // 配置中明确写了0或正数
+            return !HighHealthDatabase.canControlMore(playerUUID, typeId, customMax);
+        } else if (customMax == -1) {
+            // 配置中明确写了-1（无限制）
             return false;
+        } else {
+            // 未配置，使用默认高生命值限制
+            if (!isHighHealthMob(mob)) return false;
+            return !HighHealthDatabase.canControlMore(playerUUID, typeId, 1);
         }
-
-        if (getControlledHighHealthCount(playerUUID, mob.getType()) > 0) {
-            return true;
-        }
-
-        return hasPendingHighHealthRespawn(playerUUID, mob.getType());
     }
 
     /**
@@ -186,65 +209,43 @@ public class MobControlledData {
      */
     public static void removeControlledMobOnDeath(Mob mob) {
         UUID controllerUUID = getControllerUUID(mob);
-        if (controllerUUID != null) {
+        if (controllerUUID == null) return;
+
+        boolean willRespawn = PENDING_RESPAWNS.containsKey(mob.getUUID());
+
+        if (!willRespawn) {
             removeHighHealthRecord(controllerUUID, mob);
         }
     }
 
     private static void removeHighHealthRecord(UUID controllerUUID, Mob mob) {
-        if (!isHighHealthMob(mob)) {
-            return;
-        }
-
-        Map<EntityType<?>, Integer> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(controllerUUID);
-        if (controlledMobs != null) {
-            EntityType<?> mobType = mob.getType();
-            Integer currentCount = controlledMobs.get(mobType);
-            if (currentCount == null) {
-                return;
-            }
-
-            if (currentCount <= 1) {
-                controlledMobs.remove(mobType);
-            } else {
-                controlledMobs.put(mobType, currentCount - 1);
-            }
-
-            if (controlledMobs.isEmpty()) {
-                PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.remove(controllerUUID);
-            }
-        }
+        HighHealthDatabase.deleteRecord(controllerUUID, mob.getUUID());
     }
 
     private static void addHighHealthRecord(UUID controllerUUID, Mob mob) {
-        if (!isHighHealthMob(mob)) {
-            return;
+        String typeId = EntityType.getKey(mob.getType()).toString();
+        int customMax = MobControlUtil.getCustomMaxCount(mob);
+
+        int maxAllowed;
+        if (customMax >= 0) {
+            maxAllowed = customMax;
+        } else if (customMax == -1) {
+            maxAllowed = -1;  // 无限制
+        } else {
+            // 未配置，高生命值生物上限1
+            if (!isHighHealthMob(mob)) return;
+            maxAllowed = 1;
         }
 
-        PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.computeIfAbsent(controllerUUID, key -> new HashMap<>())
-                .merge(mob.getType(), 1, Integer::sum);
-    }
-
-    private static int getControlledHighHealthCount(UUID controllerUUID, EntityType<?> mobType) {
-        Map<EntityType<?>, Integer> controlledMobs = PLAYER_CONTROLLED_HIGH_HEALTH_MOBS.get(controllerUUID);
-        if (controlledMobs == null) {
-            return 0;
+        if (!HighHealthDatabase.canControlMore(controllerUUID, typeId, maxAllowed)) {
+            throw new IllegalStateException("Cannot control more than " + maxAllowed + " of " + typeId);
         }
-        return Math.max(0, controlledMobs.getOrDefault(mobType, 0));
-    }
 
-    private static boolean hasPendingHighHealthRespawn(UUID controllerUUID, EntityType<?> mobType) {
-        for (PendingRespawnData data : PENDING_RESPAWNS.values()) {
-            if (!data.controllerUUID().equals(controllerUUID) || !data.highHealthMob()) {
-                continue;
-            }
-
-            Optional<EntityType<?>> pendingType = getPendingMobType(data.mobTypeId());
-            if (pendingType.isPresent() && pendingType.get().equals(mobType)) {
-                return true;
-            }
+        CompoundTag fullNbt = mob.saveWithoutId(new CompoundTag());
+        boolean success = HighHealthDatabase.insertControlledMob(controllerUUID, mob, fullNbt);
+        if (!success) {
+            throw new IllegalStateException("Failed to insert controlled mob record");
         }
-        return false;
     }
 
     private static Optional<EntityType<?>> getPendingMobType(String typeId) {
@@ -276,7 +277,7 @@ public class MobControlledData {
      */
     public static @Nullable UUID getControllerUUID(LivingEntity mob) {
         LazyOptional<MobControlCapability> capability = mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY);
-        return capability.map(MobControlCapability::getControllerUUID).orElse(null);
+        return capability.resolve().map(MobControlCapability::getControllerUUID).orElse(null);
     }
 
     /**
@@ -497,7 +498,7 @@ public class MobControlledData {
      */
     public static boolean scheduleRespawn(Mob mob, ServerLevel level, String deathCause) {
         if (isSummoned(mob)) {
-            return false;   // 召唤物不重生
+            return false;
         }
         MinecraftServer server = level.getServer();
         ensurePendingRespawnsLoaded(server);
@@ -522,6 +523,9 @@ public class MobControlledData {
 
         String mobTypeId = EntityType.getKey(mob.getType()).toString();
         boolean highHealthMob = isHighHealthMob(mob);
+
+        // ★ 新增：标记数据库中的记录为“重生等待中” ★
+        HighHealthDatabase.markAsRespawning(controllerUUID, mob.getUUID());
 
         PENDING_RESPAWNS.put(
                 mob.getUUID(), new PendingRespawnData(
@@ -592,7 +596,15 @@ public class MobControlledData {
                     respawnedMob.getPersistentData().putBoolean("mob_controller:respawned", true);
                 }
 
-                addControlledMob(data.controllerUUID(), respawnedMob);
+                resetBossPhaseIfNeeded(respawnedMob);
+
+                // ★ 重生：添加控制时跳过高生命记录（数据库已在 markAsRespawning 中保留记录）
+                addControlledMob(data.controllerUUID(), respawnedMob, true, true);
+
+                // ★ 更新数据库：将旧的标记记录更新为新实体的信息 ★
+                CompoundTag newNbt = respawnedMob.saveWithoutId(new CompoundTag());
+                HighHealthDatabase.respawnCompleted(data.controllerUUID(), data.deadMobUUID(), respawnedMob, newNbt);
+
                 respawnedMob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
                         .ifPresent(cap -> cap.deserializeNBT(data.capabilityNbt().copy()));
                 clearSystemAttack(respawnedMob);
@@ -612,6 +624,79 @@ public class MobControlledData {
                 PENDING_RESPAWNS.remove(deadMobUUID);
             }
             savePendingRespawns(server);
+        }
+    }
+
+    private static void resetBossPhaseIfNeeded(Mob mob) {
+        resetCataclysmBossPhase(mob);
+        resetTwilightForestBossPhase(mob);
+    }
+
+
+    /**
+     * 重置灾变（Cataclysm）模组的 Boss 阶段状态
+     */
+    private static void resetCataclysmBossPhase(Mob mob) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("cataclysm")) return;
+
+        // Ender Guardian
+        if (mob instanceof com.github.L_Ender.cataclysm.entity.AnimationMonster.BossMonsters.Ender_Guardian_Entity guardian) {
+            guardian.setIsHelmetless(false);
+            guardian.setUsedMassDestruction(false);
+        }
+        // Netherite Monstrosity
+        else if (mob instanceof com.github.L_Ender.cataclysm.entity.InternalAnimationMonster.IABossMonsters.NewNetherite_Monstrosity.Netherite_Monstrosity_Entity monstrosity) {
+            monstrosity.setIsBerserk(false);
+        }
+        // The Harbinger
+        else if (mob instanceof com.github.L_Ender.cataclysm.entity.AnimationMonster.BossMonsters.The_Harbinger_Entity harbinger) {
+            harbinger.setIsLaserMode(false);
+            harbinger.setOverload(0);
+            harbinger.setIsAct(true);
+        }
+        // Ancient Remnant
+        else if (mob instanceof com.github.L_Ender.cataclysm.entity.InternalAnimationMonster.IABossMonsters.Ancient_Remnant.Ancient_Remnant_Entity remnant) {
+            remnant.setIsPower(false);
+            remnant.setRage(0);
+            remnant.setNecklace(true);
+        }
+        // Scylla
+        else if (mob instanceof com.github.L_Ender.cataclysm.entity.InternalAnimationMonster.IABossMonsters.Scylla.Scylla_Entity scylla) {
+            scylla.setPhase(0);
+            scylla.setEye(false);
+            scylla.setAct(true);
+            scylla.setChainAnchor(false);
+            scylla.setFlying(false);
+        }
+        // Ignis
+        else if (mob instanceof com.github.L_Ender.cataclysm.entity.AnimationMonster.BossMonsters.Ignis_Entity ignis) {
+            ignis.setBossPhase(0);
+            ignis.setIsShieldBreak(false);
+            ignis.setShieldDurability(0);
+            ignis.setShowShield(true);
+            ignis.setIsBlocking(false);
+            ignis.setIsSword(false);
+        }
+        // The Leviathan
+        else if (mob instanceof com.github.L_Ender.cataclysm.entity.AnimationMonster.BossMonsters.The_Leviathan.The_Leviathan_Entity leviathan) {
+            leviathan.setMeltDown(false);
+            leviathan.setBlastChance(0);
+            leviathan.setModeChance(0);
+        }
+        // Maledictus
+        else if (mob instanceof com.github.L_Ender.cataclysm.entity.InternalAnimationMonster.IABossMonsters.Maledictus.Maledictus_Entity maledictus) {
+            maledictus.setRageMeter(0);
+            maledictus.setWeapon(0);
+        }
+    }
+
+    /**
+     * 重置暮色森林钟巫妖的护盾
+     */
+    private static void resetTwilightForestBossPhase(Mob mob) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("twilightforest")) return;
+        if (mob instanceof twilightforest.entity.boss.Lich lich) {
+            lich.setShieldStrength(6);
         }
     }
 
@@ -817,5 +902,137 @@ public class MobControlledData {
         );
 
         return true;
+    }
+
+    // 获取军团模式状态
+    public static boolean isLegionMode(Mob mob) {
+        return mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY)
+                .map(MobControlCapability::isLegionMode).orElse(false);
+    }
+
+    // 设置单个生物的军团模式（自动处理aggressive模式强制/恢复）
+    public static void setLegionMode(Mob mob, boolean enabled) {
+        mob.getCapability(MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY).ifPresent(cap -> {
+            cap.setLegionMode(enabled);
+            mob.setTarget(null);
+            NetWorkManager.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> mob),
+                    new MobControlCapabilitySyncPacket(mob.getId(), cap.serializeNBT()));
+        });
+    }
+
+    // 批量切换（半径以内所有玩家控制的生物）
+    public static int setLegionModeForAll(Player player, int radius, boolean enabled) {
+        if (player.level().isClientSide) return 0;
+        AABB area = player.getBoundingBox().inflate(radius);
+        List<Mob> controlledMobs = player.level().getEntitiesOfClass(Mob.class, area,
+                mob -> isControlledEntity(mob) && player.getUUID().equals(getControllerUUID(mob)));
+        for (Mob mob : controlledMobs) {
+            setLegionMode(mob, enabled);
+            mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100));
+        }
+        return controlledMobs.size();
+    }
+
+    /**
+     * 当玩家改变队伍颜色后，全局清理所有因颜色相同而不再敌对的军团战斗目标。
+     * 包括生物之间的军团目标，以及生物对该玩家的攻击目标。
+     * 注意：由玩家直接指挥的攻击（系统攻击）不会被清除。
+     *
+     * @param changedPlayer 改变颜色的玩家
+     */
+    public static void clearLegionTargetsAfterPlayerColorChange(Player changedPlayer) {
+        if (changedPlayer.level().isClientSide) return;
+        ServerLevel level = (ServerLevel) changedPlayer.level();
+        UUID changedUUID = changedPlayer.getUUID();
+
+        // 1. 清理生物之间的军团目标
+        List<Mob> allControlledMobs = level.getEntitiesOfClass(Mob.class,
+                changedPlayer.getBoundingBox().inflate(128),
+                mob -> isControlledEntity(mob));
+
+        for (Mob attacker : allControlledMobs) {
+            LivingEntity target = attacker.getTarget();
+            if (!(target instanceof Mob targetMob)) continue;
+            if (!isLegionMode(targetMob)) continue;
+
+            // 如果攻击是由玩家指令发起的（系统攻击），则保留，不清除
+            if (isSystemAttack(attacker)) {
+                continue;
+            }
+
+            Player attackerOwner = getController(attacker, level);
+            if (attackerOwner == null) continue;
+            UUID targetControllerUUID = getControllerUUID(targetMob);
+            if (targetControllerUUID == null) continue;
+            Player targetOwner = level.getServer().getPlayerList().getPlayer(targetControllerUUID);
+            if (targetOwner == null) continue;
+
+            ChatFormatting attackerColor = LegionBannerItem.getLegionColor(attackerOwner);
+            ChatFormatting targetColor = LegionBannerItem.getLegionColor(targetOwner);
+
+            if (attackerColor == targetColor) {
+                attacker.setTarget(null);
+
+                if (attacker instanceof AbstractPiglin || attacker instanceof Hoglin || attacker instanceof Zoglin) {
+                    attacker.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                    attacker.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
+                }
+
+                if (attacker instanceof Warden warden) {
+                    Brain<?> brain = warden.getBrain();
+                    if (brain != null) {
+                        brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                        brain.eraseMemory(MemoryModuleType.ROAR_TARGET);
+                    }
+                    warden.clearAnger(targetMob);
+                }
+            }
+        }
+
+        // 2. 清理所有受控生物对该玩家的攻击目标（内部已处理系统攻击跳过）
+        clearControlledMobsTargetOnPlayer(changedPlayer);
+    }
+
+    public static int getLegionColorRGB(Mob mob) {
+        if (!isLegionMode(mob)) return -1;
+        Player controller = getController(mob, mob.level());
+        if (controller != null) {
+            ChatFormatting color = LegionBannerItem.getLegionColor(controller);
+            return LegionBannerItem.getColorRGB(color);
+        }
+        return -1;
+    }
+
+    /**
+     * 清除所有受控生物对指定玩家的攻击目标（用于玩家颜色改变或军团模式切换时）。
+     * 注意：如果生物是由主人指令（系统攻击）攻击该玩家的，则不清除，以尊重玩家指挥。
+     */
+    public static void clearControlledMobsTargetOnPlayer(Player player) {
+        if (player.level().isClientSide) return;
+        ServerLevel level = (ServerLevel) player.level();
+        List<Mob> allControlled = level.getEntitiesOfClass(Mob.class,
+                player.getBoundingBox().inflate(128),
+                mob -> MobControlledData.isControlledEntity(mob));
+        for (Mob mob : allControlled) {
+            if (mob.getTarget() == player) {
+                // 如果是由玩家指令发起的攻击（系统攻击），则保留，不清除
+                if (MobControlledData.isSystemAttack(mob)) {
+                    continue;
+                }
+                mob.setTarget(null);
+                if (mob instanceof AbstractPiglin || mob instanceof Hoglin || mob instanceof Zoglin) {
+                    Brain<?> brain = mob.getBrain();
+                    brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                    brain.eraseMemory(MemoryModuleType.ANGRY_AT);
+                } else if (mob instanceof Warden warden) {
+                    Brain<?> brain = warden.getBrain();
+                    if (brain != null) {
+                        brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                        brain.eraseMemory(MemoryModuleType.ROAR_TARGET);
+                    }
+                    warden.clearAnger(player);
+                }
+            }
+        }
     }
 }

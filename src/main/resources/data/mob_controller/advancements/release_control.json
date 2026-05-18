@@ -1,0 +1,26 @@
+{
+  "display": {
+    "icon": {
+      "item": "mob_controller:heart_contract"
+    },
+    "title": {
+      "translate": "advancements.mob_controller.release_control.title"
+    },
+    "description": {
+      "translate": "advancements.mob_controller.release_control.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "mob_controller:first_companion",
+  "criteria": {
+    "release": {
+      "trigger": "mob_controller:release_control"
+    }
+  },
+  "rewards": {
+    "experience": 30
+  }
+}

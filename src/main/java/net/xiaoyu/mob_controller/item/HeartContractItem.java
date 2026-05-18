@@ -2,6 +2,7 @@ package net.xiaoyu.mob_controller.item;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -14,6 +15,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
+import net.xiaoyu.mob_controller.MobController;
+import net.xiaoyu.mob_controller.advancement.MobControllerTriggers;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 
 import javax.annotation.Nullable;
@@ -39,6 +42,10 @@ public class HeartContractItem extends Item {
 
         mob.setTarget(null);
         MobControlledData.releaseControl(mob);
+        if (player instanceof ServerPlayer serverPlayer) {
+            MobControllerTriggers.RELEASE_CONTROL.trigger(serverPlayer, mob);
+            MobController.grantRootAdvancementIfNeeded(serverPlayer);
+        }
         mob.persistenceRequired = false;
         return InteractionResult.SUCCESS;
     }

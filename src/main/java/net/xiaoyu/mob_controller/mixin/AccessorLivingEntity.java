@@ -26,4 +26,7 @@ public interface AccessorLivingEntity {
      */
     @Accessor("jumping")
     boolean mob_controller$getJumping();
+
+    @Accessor("effectsDirty")
+    boolean mob_controller$getEffectsDirty();
 }

@@ -2,6 +2,7 @@ package net.xiaoyu.mob_controller.item;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -17,7 +18,6 @@ import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.util.CustomControlHandler;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
-import net.minecraft.network.chat.Component;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -40,9 +40,7 @@ public class GrainItem extends MobControllerItem {
         }
         // 如果生物有自定义规则且当前物品不匹配，禁止控制
         if (CustomControlHandler.hasCustomRule(mob) && !CustomControlHandler.isMatchingCustomItem(mob, stack.getItem())) {
-            if (!player.level().isClientSide) {
-                spawnParticles(mob, false);
-            }
+            MobControlUtil.spawnControlParticles(mob, false);
             return InteractionResult.FAIL;
         }
 
@@ -53,68 +51,22 @@ public class GrainItem extends MobControllerItem {
 
         boolean alwaysSuccess = Config.ALWAYS_SUCCESS.get();
 
-        // ---------- 限制条件检查（这些失败不消耗物品） ----------
-        // 攻击力上限
-        if (!alwaysSuccess) {
-            var attackAttr = mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-            double attackDamage = attackAttr != null ? attackAttr.getValue() : 0.0;
-            if (attackDamage >= Config.ATTACK_LIMIT.get()) {
-                spawnParticles(mob, false);
-                return InteractionResult.FAIL;
-            }
-        }
-        // 生命值上限
-        if (!alwaysSuccess) {
-            float maxHealth = mob.getMaxHealth();
-            if (maxHealth >= Config.HEALTH_LIMIT.get()) {
-                spawnParticles(mob, false);
-                return InteractionResult.FAIL;
-            }
-        }
-        // 当前生命值条件（固定血量或百分比）
-        if (!alwaysSuccess) {
-            float currentHealth = mob.getHealth();
-            float maxHealth = mob.getMaxHealth();
-            boolean healthConditionMet = false;
-            if (currentHealth <= Config.REQUIRED_HEALTH.get()) {
-                healthConditionMet = true;
-            }
-            double healthPercent = (currentHealth / maxHealth) * 100.0;
-            if (healthPercent <= Config.HEALTH_PERCENT_THRESHOLD.get()) {
-                healthConditionMet = true;
-            }
-            if (!healthConditionMet) {
-                spawnParticles(mob, false);
-                return InteractionResult.FAIL;
-            }
-        }
-        // 黑名单 / 已有主人
-        if (Config.BLACKLISTED_MOBS.get().contains(net.minecraft.world.entity.EntityType.getKey(mob.getType()).toString())
-                || hasOwnerOrTameTag(mob)) {
-            spawnParticles(mob, false);
-            return InteractionResult.FAIL;
-        }
-        // 高生命值同类型限制
-        if (MobControlledData.hasPlayerControlledSameHighHealthMob(player.getUUID(), mob)) {
-            spawnParticles(mob, false);
+        // 使用统一的条件检查
+        if (!MobControlUtil.canBeControlled(mob, player, alwaysSuccess)) {
+            MobControlUtil.spawnControlParticles(mob, false);
             return InteractionResult.FAIL;
         }
 
-        // ---------- 概率判定（成功或概率失败都会消耗物品） ----------
-        float controlChance = 1.0f;
-        if (!alwaysSuccess) {
-            controlChance = calculateControlChance(mob);
-        }
-
+        // 概率判定（成功或概率失败都会消耗物品）
+        float controlChance = alwaysSuccess ? 1.0f : MobControlUtil.calculateControlChance(mob);
         boolean success = level.random.nextFloat() <= controlChance;
         if (success) {
             mob.setTarget(null);
-            controlMob(player, mob);
-            MobControlUtil.showMessageToPlayer(player, mob.getDisplayName(),
-                    "mob_controller.mode.follow", new Object[]{}, ChatFormatting.GOLD);
-            spawnParticles(mob, true);
+            MobControlUtil.performControlMob(player, mob);
+            MobControlUtil.showMessageToPlayer(player, mob.getDisplayName(), "mob_controller.mode.follow", new Object[]{}, ChatFormatting.GOLD);
+            MobControlUtil.spawnControlParticles(mob, true);
         } else {
-            spawnParticles(mob, false);
+            MobControlUtil.spawnControlParticles(mob, false);
         }
 
         // 消耗物品（创造模式不消耗）
@@ -145,20 +97,6 @@ public class GrainItem extends MobControllerItem {
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
         return stack;
-    }
-
-    // 辅助方法（从父类复制）
-    private boolean hasOwnerOrTameTag(Mob mob) {
-        if (mob instanceof TamableAnimal tamable) {
-            if (tamable.isTame()) {
-                return true;
-            }
-        }
-        CompoundTag nbt = mob.saveWithoutId(new CompoundTag());
-        if (nbt.contains("Owner") || nbt.contains("OwnerUUID")) {
-            return true;
-        }
-        return nbt.contains("Tame") && nbt.getBoolean("Tame");
     }
 
     @Override

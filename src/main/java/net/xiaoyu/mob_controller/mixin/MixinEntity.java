@@ -4,8 +4,10 @@ import net.minecraft.commands.CommandSource;
 import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.ElderGuardian;
 import net.minecraft.world.level.entity.EntityAccess;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.extensions.IForgeEntity;
 import net.xiaoyu.mob_controller.entity.IControllableEntity;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
@@ -15,6 +17,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nullable;
 
@@ -80,4 +83,54 @@ public abstract class MixinEntity implements Nameable, EntityAccess, CommandSour
     @Shadow
     @Nullable
     public abstract Entity getFirstPassenger();
+
+    /**
+     * 拦截 positionRider 方法，在设置乘客位置时应用偏移。
+     * 该方法会在每次坐骑刷新乘客位置时调用，稳定性好，不存在混淆映射问题。
+     *
+     * @param passenger 乘客实体
+     * @param function  移动函数（通常使用 Entity::setPos）
+     * @param ci        回调信息
+     */
+    @Inject(
+            method = "positionRider(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity$MoveFunction;)V",
+            at = @At("HEAD"),
+            cancellable = true,
+            remap = true
+    )
+    private void onPositionRider(Entity passenger, Entity.MoveFunction function, CallbackInfo ci) {
+        Entity self = (Entity) (Object) this;
+        if (self instanceof Mob mount && MobControlUtil.isDirectRideableControlledMob(mount)) {
+            Vec3 offset = MobControlUtil.getRideOffset(mount);
+            if (!offset.equals(Vec3.ZERO)) {
+                // 获取默认位置
+                Vec3 defaultPos = getDefaultPassengerPosition(mount, passenger);
+                // 计算旋转后的偏移（只旋转 X 和 Z，Y 不变）
+                float yaw = mount.getYRot();
+                double rad = Math.toRadians(yaw);
+                double cos = Math.cos(rad);
+                double sin = Math.sin(rad);
+                double rotatedX = offset.x * cos - offset.z * sin;
+                double rotatedZ = offset.x * sin + offset.z * cos;
+                // 最终位置 = 默认位置 + 旋转后的偏移
+                function.accept(passenger,
+                        defaultPos.x + rotatedX,
+                        defaultPos.y + offset.y,
+                        defaultPos.z + rotatedZ);
+                ci.cancel();
+            }
+        }
+    }
+
+    private Vec3 getDefaultPassengerPosition(Entity mount, Entity passenger) {
+        double offsetY = mount.getPassengersRidingOffset() + passenger.getMyRidingOffset();
+        Vec3 localOffset = new Vec3(0.0, offsetY, 0.0);
+        float yaw = mount.getYRot();
+        float rad = -yaw * (float) (Math.PI / 180.0);
+        float cos = (float) Math.cos(rad);
+        float sin = (float) Math.sin(rad);
+        double rotatedX = localOffset.x * cos - localOffset.z * sin;
+        double rotatedZ = localOffset.x * sin + localOffset.z * cos;
+        return new Vec3(mount.getX() + rotatedX, mount.getY() + localOffset.y, mount.getZ() + rotatedZ);
+    }
 }

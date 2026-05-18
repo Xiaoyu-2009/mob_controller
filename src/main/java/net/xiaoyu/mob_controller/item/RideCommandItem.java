@@ -4,6 +4,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -19,17 +20,38 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.xiaoyu.mob_controller.Config;
 import net.xiaoyu.mob_controller.util.MobControlUtil;
 import net.xiaoyu.mob_controller.util.MobControlledData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 骑乘令物品。
+ *
+ * <p>使用方式：</p>
+ * <ul>
+ *   <li>左键点击一个受控生物或驯服宠物 → 将其选为“骑手”（物品会记录该生物的UUID）。</li>
+ *   <li>再次左键点击另一个可作为坐骑的生物 → 让之前选中的骑手骑上该坐骑。</li>
+ *   <li>对空气右键 → 清除当前选中的骑手。</li>
+ *   <li>对已骑乘的受控生物右键 → 使其从坐骑上下来。</li>
+ * </ul>
+ *
+ * <p>坐骑的乘客数量受到配置文件限制（max_riders_per_mount），未配置的实体默认可承载 1 个乘客，例如骆驼默认配置为 2。</p>
+ */
 public class RideCommandItem extends Item {
 
     private static final String TAG_RIDER_UUID = "RideCommandRiderUUID";
-    private static final String TAG_RIDER_NAME  = "RideCommandRiderName";   // 新增：存储骑手显示名称
+    private static final String TAG_RIDER_NAME  = "RideCommandRiderName";   // 存储骑手显示名称
+
+    // ========== 乘客数量配置缓存 ==========
+    private static final Map<String, Integer> MAX_RIDERS_CACHE = new ConcurrentHashMap<>();
+    private static boolean maxRidersCacheInitialized = false;
 
     public RideCommandItem(Properties properties) {
         super(properties);
@@ -95,7 +117,7 @@ public class RideCommandItem extends Item {
         return hasRider(stack);
     }
 
-    // ========== 骑手存储逻辑（扩展名称） ==========
+    // ========== 骑手存储逻辑 ==========
 
     private static boolean hasRider(ItemStack stack) {
         return stack.getOrCreateTag().contains(TAG_RIDER_UUID);
@@ -116,7 +138,6 @@ public class RideCommandItem extends Item {
         if (tag != null && tag.contains(TAG_RIDER_NAME)) {
             return tag.getString(TAG_RIDER_NAME);
         }
-        // 兼容旧版本：如果没有名称，尝试从UUID获取（仅当世界可用时，但工具提示中 world 可能为 null，回退到未知）
         return Component.translatable("mob_controller.tooltip.ride_command.unknown").getString();
     }
 
@@ -169,6 +190,14 @@ public class RideCommandItem extends Item {
 
     // ========== 左键选择/骑乘逻辑（由事件调用） ==========
 
+    /**
+     * 处理骑乘令的左键点击逻辑（由 MobControllerEvent 调用）。
+     *
+     * @param player 操作玩家
+     * @param target 被左键的实体
+     * @param stack  玩家主手的骑乘令物品栈
+     * @return true 表示已处理该事件，应取消原版攻击伤害
+     */
     public static boolean handleLeftClick(ServerPlayer player, Entity target, ItemStack stack) {
         Level level = player.level();
         if (!(target instanceof Mob mob)) {
@@ -200,6 +229,17 @@ public class RideCommandItem extends Item {
                 return true;
             }
 
+            // ========== 新增：检查坐骑的最大乘客数量限制 ==========
+            int maxRiders = getMaxRidersForMount(mob);
+            if (mob.getPassengers().size() >= maxRiders) {
+                MobControlUtil.showMessageToPlayer(player, Component.empty(),
+                        "mob_controller.message.ride_mount_full",
+                        new Object[]{maxRiders, mob.getDisplayName()},  // 注意顺序：数量在前，坐骑名称在后
+                        ChatFormatting.RED);
+                clearRider(stack);
+                return true;
+            }
+
             if (riderMob.isPassenger()) {
                 riderMob.stopRiding();
             }
@@ -219,5 +259,50 @@ public class RideCommandItem extends Item {
             MobControlUtil.showMessageToPlayer(player, Component.empty(), "mob_controller.message.ride_selected", new Object[]{mob.getDisplayName()}, ChatFormatting.GOLD);
             return true;
         }
+    }
+
+    // ========== 新增：乘客数量限制辅助方法 ==========
+
+    /**
+     * 从配置文件加载每个实体类型的最大乘客数（格式："entity_id;max_count"）。
+     * 未在配置中列出的实体默认最大乘客数为 1。
+     */
+    private static void ensureMaxRidersCache() {
+        if (maxRidersCacheInitialized) return;
+        synchronized (RideCommandItem.class) {
+            if (maxRidersCacheInitialized) return;
+            MAX_RIDERS_CACHE.clear();
+            for (String entry : Config.MAX_RIDERS_PER_MOUNT.get()) {
+                String[] parts = entry.split(";");
+                if (parts.length == 2) {
+                    try {
+                        MAX_RIDERS_CACHE.put(parts[0], Integer.parseInt(parts[1]));
+                    } catch (NumberFormatException ignored) {
+                        // 忽略格式错误的条目
+                    }
+                }
+            }
+            maxRidersCacheInitialized = true;
+        }
+    }
+
+    /**
+     * 获取某个实体作为坐骑时允许的最大乘客数（未配置则默认为 1）。
+     */
+    private static int getMaxRidersForMount(Entity mount) {
+        ensureMaxRidersCache();
+        ResourceLocation key = ForgeRegistries.ENTITY_TYPES.getKey(mount.getType());
+        if (key != null) {
+            return MAX_RIDERS_CACHE.getOrDefault(key.toString(), 1);
+        }
+        return 1;
+    }
+
+    /**
+     * 用于配置重载时重置乘客数量缓存（可选）。
+     */
+    public static void resetMaxRidersCache() {
+        maxRidersCacheInitialized = false;
+        MAX_RIDERS_CACHE.clear();
     }
 }

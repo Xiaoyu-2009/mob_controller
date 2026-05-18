@@ -1,0 +1,26 @@
+{
+  "display": {
+    "icon": {
+      "item": "minecraft:honeycomb"
+    },
+    "title": {
+      "translate": "advancements.mob_controller.wax_water_sensitive.title"
+    },
+    "description": {
+      "translate": "advancements.mob_controller.wax_water_sensitive.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "mob_controller:root",
+  "criteria": {
+    "wax": {
+      "trigger": "mob_controller:wax_water_sensitive"
+    }
+  },
+  "rewards": {
+    "experience": 50
+  }
+}

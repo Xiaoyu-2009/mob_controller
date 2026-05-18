@@ -84,4 +84,17 @@ public class ModItems {
             "grain",
             () -> new GrainItem(new Item.Properties().stacksTo(64))
     );
+
+    /**
+     * 控制令切换模式版
+     */
+    public static final RegistryObject<Item> MODE_SELECT_CONTROL_COMMAND_ITEM = ITEMS.register(
+            "mode_select_control_command",
+            () -> new ModeSelectControlCommandItem(new Item.Properties().stacksTo(1))
+    );
+
+    public static final RegistryObject<Item> LEGION_BANNER_ITEM = ITEMS.register(
+            "legion_banner",
+            () -> new LegionBannerItem(new Item.Properties().stacksTo(1))
+    );
 }

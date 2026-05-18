@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "mob_controller:control_command"
+    }
+  ],
+  "result": {
+    "item": "mob_controller:mode_select_control_command"
+  }
+}

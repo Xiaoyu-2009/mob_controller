@@ -17,11 +17,52 @@ public class MobControllerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        // 只对 ValkyrieQueenMixin 进行条件检查
-        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.ValkyrieQueenMixin")) {
-            return ModList.get().isLoaded("aether"); // 天境模组存在时才应用
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.alexsmobs.MixinCachalotWhaleSleep")) {
+            return ModList.get().isLoaded("alexsmobs");
         }
-        return true; // 其他 Mixin 正常应用
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.alexscaves.MixinVesper")) {
+            return ModList.get().isLoaded("alexscaves");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.cataclysm.MixinEnderGuardianNoRespawner")) {
+            return ModList.get().isLoaded("cataclysm");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.aether.ValkyrieQueenMixin")) {
+            return ModList.get().isLoaded("aether");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.AlphaYetiNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.AlphaYeti");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.HydraNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.Hydra");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.LichNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.Lich");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.MinoshroomNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.Minoshroom");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.NagaNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.Naga");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.PlateauBossNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.PlateauBoss");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.SnowQueenNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.SnowQueen");
+        }
+        if (mixinClassName.equals("net.xiaoyu.mob_controller.mixin.twilightforest.UrGhastNoChestMixin")) {
+            return isClassPresent("twilightforest.entity.boss.UrGhast");
+        }
+        return true;
+    }
+
+    private boolean isClassPresent(String className) {
+        try {
+            Class.forName(className);
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     @Override

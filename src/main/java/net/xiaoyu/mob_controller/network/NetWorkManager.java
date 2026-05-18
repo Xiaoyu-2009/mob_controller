@@ -43,5 +43,23 @@ public class NetWorkManager {
                 SwitchAggressiveModePacket::new, SwitchAggressiveModePacket::handle);
         INSTANCE.registerMessage(id++, PlaySoundPacket.class, PlaySoundPacket::toBytes,
                 PlaySoundPacket::new, PlaySoundPacket::handle);
+        INSTANCE.registerMessage(id++, SyncSelectedModePacket.class, SyncSelectedModePacket::toBytes,
+                SyncSelectedModePacket::new, SyncSelectedModePacket::handle);
+        INSTANCE.registerMessage(id++, UpdateLegionColorPacket.class, UpdateLegionColorPacket::toBytes,
+                UpdateLegionColorPacket::new, UpdateLegionColorPacket::handle);
+        INSTANCE.registerMessage(id++, LegionModeBatchPacket.class, LegionModeBatchPacket::toBytes,
+                LegionModeBatchPacket::new, LegionModeBatchPacket::handle);
+        INSTANCE.registerMessage(id++, SyncLegionColorPacket.class, SyncLegionColorPacket::toBytes,
+                SyncLegionColorPacket::new, SyncLegionColorPacket::handle);
+        INSTANCE.registerMessage(id++, SyncLegionModePacket.class, SyncLegionModePacket::toBytes,
+                SyncLegionModePacket::new, SyncLegionModePacket::handle);
+        INSTANCE.registerMessage(id++, TogglePlayerLegionModePacket.class, TogglePlayerLegionModePacket::toBytes,
+                TogglePlayerLegionModePacket::new, TogglePlayerLegionModePacket::handle);
+        INSTANCE.registerMessage(id++, PlayerJumpPacket.class, PlayerJumpPacket::toBytes,
+                PlayerJumpPacket::new, PlayerJumpPacket::handle);
+        INSTANCE.registerMessage(id++, SyncWaxedPacket.class, SyncWaxedPacket::toBytes,
+                SyncWaxedPacket::new, SyncWaxedPacket::handle);
+        INSTANCE.registerMessage(id++, SyncChilledPacket.class, SyncChilledPacket::toBytes,
+                SyncChilledPacket::new, SyncChilledPacket::handle);
     }
 }

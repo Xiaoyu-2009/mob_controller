@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "AEA"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:iron_ingot"
+    },
+    "B": {
+      "item": "minecraft:lead"
+    },
+    "C": {
+      "item": "minecraft:leather"
+    },
+    "D": {
+      "item": "minecraft:saddle"
+    },
+    "E": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "mob_controller:ride_command",
+    "count": 1
+  }
+}

@@ -1,22 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "IAI",
-    "RSR",
-    "IAI"
+    "121",
+    "343",
+    "121"
   ],
   "key": {
-    "I": {
+    "1": {
+      "item": "minecraft:gold_nugget"
+    },
+    "2": {
       "item": "minecraft:iron_ingot"
     },
-    "A": {
-      "item": "minecraft:amethyst_shard"
+    "3": {
+      "item": "minecraft:iron_ingot"
     },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "S": {
-      "item": "minecraft:lever"
+    "4": {
+      "item": "minecraft:gold_ingot"
     }
   },
   "result": {

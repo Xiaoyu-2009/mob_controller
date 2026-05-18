@@ -1,0 +1,26 @@
+{
+  "display": {
+    "icon": {
+      "item": "mob_controller:mob_controller"
+    },
+    "title": {
+      "translate": "advancements.mob_controller.tame_master.title"
+    },
+    "description": {
+      "translate": "advancements.mob_controller.tame_master.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "mob_controller:first_companion",
+  "criteria": {
+    "master": {
+      "trigger": "mob_controller:tame_master"
+    }
+  },
+  "rewards": {
+    "experience": 500
+  }
+}

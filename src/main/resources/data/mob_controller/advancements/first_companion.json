@@ -1,0 +1,26 @@
+{
+  "display": {
+    "icon": {
+      "item": "mob_controller:grain"
+    },
+    "title": {
+      "translate": "advancements.mob_controller.first_companion.title"
+    },
+    "description": {
+      "translate": "advancements.mob_controller.first_companion.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "mob_controller:tame_journey",
+  "criteria": {
+    "first_tame": {
+      "trigger": "mob_controller:first_companion"
+    }
+  },
+  "rewards": {
+    "experience": 25
+  }
+}

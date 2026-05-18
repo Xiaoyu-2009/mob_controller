@@ -56,22 +56,22 @@ public abstract class MixinElderGuardian extends Guardian {
         }
 
         LivingEntity target = this.getTarget();
-        if (target instanceof ServerPlayer serverPlayer && MobControlUtil.isEnemy(this, serverPlayer)) {
+        if (target instanceof ServerPlayer serverPlayer) {
             MobEffectInstance effect = new MobEffectInstance(
-                MobEffects.DIG_SLOWDOWN,
-                CONTROLLED_ELDER_GUARDIAN_EFFECT_DURATION,
-                CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER
+                    MobEffects.DIG_SLOWDOWN,
+                    CONTROLLED_ELDER_GUARDIAN_EFFECT_DURATION,
+                    CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER
             );
 
             if (!serverPlayer.hasEffect(MobEffects.DIG_SLOWDOWN)
-                || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN))
-                       .getAmplifier() < CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER
-                || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN))
+                    || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN))
+                    .getAmplifier() < CONTROLLED_ELDER_GUARDIAN_EFFECT_AMPLIFIER
+                    || Objects.requireNonNull(serverPlayer.getEffect(MobEffects.DIG_SLOWDOWN))
                     .endsWithin(CONTROLLED_ELDER_GUARDIAN_REFRESH_MARGIN)) {
                 serverPlayer.addEffect(new MobEffectInstance(effect), this);
                 serverPlayer.connection.send(new ClientboundGameEventPacket(
-                    ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT,
-                    this.isSilent() ? 0 : 1
+                        ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT,
+                        this.isSilent() ? 0 : 1
                 ));
             }
         }

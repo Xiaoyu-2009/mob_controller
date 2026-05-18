@@ -37,7 +37,8 @@ public class MobControlCapabilityRegister {
     @SubscribeEvent
     public static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.register(MobControlCapability.class);
-
+        event.register(WaxedCapability.class);
+        event.register(ChilledCapability.class);
         MobControlCapabilityProvider.MOB_CONTROL_CAPABILITY = MOB_CONTROL_CAPABILITY;
     }
 }

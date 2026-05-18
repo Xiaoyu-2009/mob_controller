@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "conditions": [
+    {
+      "type": "mob_controller:config_condition",
+      "expected": true
+    }
+  ],
+  "ingredients": [
+    { "item": "minecraft:wheat" },
+    { "item": "minecraft:carrot" },
+    { "item": "minecraft:potato" },
+    { "item": "minecraft:beetroot" },
+    { "item": "minecraft:melon_slice" },
+    { "item": "minecraft:pumpkin_seeds" },
+    { "item": "minecraft:sweet_berries" },
+    { "item": "minecraft:glow_berries" },
+    { "item": "minecraft:sugar_cane" }
+  ],
+  "result": {
+    "item": "mob_controller:grain",
+    "count": 1
+  }
+}

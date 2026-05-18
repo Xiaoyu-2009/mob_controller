@@ -1,0 +1,26 @@
+{
+  "display": {
+    "icon": {
+      "item": "mob_controller:grain"
+    },
+    "title": {
+      "translate": "advancements.mob_controller.tame_journey.title"
+    },
+    "description": {
+      "translate": "advancements.mob_controller.tame_journey.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "mob_controller:root",
+  "criteria": {
+    "craft_controller": {
+      "trigger": "mob_controller:craft_controller"
+    }
+  },
+  "rewards": {
+    "experience": 50
+  }
+}

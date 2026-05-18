@@ -39,20 +39,20 @@ public class CreativeMobControllerItem extends MobControllerItem {
         if (level.isClientSide) return InteractionResult.SUCCESS;
 
         // 黑名单 / 已有主人
-        if (Config.BLACKLISTED_MOBS.get().contains(EntityType.getKey(mob.getType()).toString()) || hasOwnerOrTameTag(mob)) {
-            spawnParticles(mob, false);
+        if (Config.BLACKLISTED_MOBS.get().contains(EntityType.getKey(mob.getType()).toString()) || MobControlUtil.hasOwnerOrTameTag(mob)) {
+            MobControlUtil.spawnControlParticles(mob, false);
             return InteractionResult.FAIL;
         }
         // 高生命值同类限制
         if (MobControlledData.hasPlayerControlledSameHighHealthMob(player.getUUID(), mob)) {
-            spawnParticles(mob, false);
+            MobControlUtil.spawnControlParticles(mob, false);
             return InteractionResult.FAIL;
         }
 
         mob.setTarget(null);
-        controlMob(player, mob);
+        MobControlUtil.performControlMob(player, mob);
         MobControlUtil.showMessageToPlayer(player, mob.getDisplayName(), "mob_controller.mode.follow", new Object[]{}, ChatFormatting.GOLD);
-        spawnParticles(mob, true);
+        MobControlUtil.spawnControlParticles(mob, true);
         return InteractionResult.SUCCESS;
     }
 
@@ -60,12 +60,6 @@ public class CreativeMobControllerItem extends MobControllerItem {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         return InteractionResultHolder.pass(player.getItemInHand(hand));
-    }
-
-    private boolean hasOwnerOrTameTag(Mob mob) {
-        if (mob instanceof net.minecraft.world.entity.TamableAnimal tamable && tamable.isTame()) return true;
-        net.minecraft.nbt.CompoundTag nbt = mob.saveWithoutId(new net.minecraft.nbt.CompoundTag());
-        return nbt.contains("Owner") || nbt.contains("OwnerUUID") || (nbt.contains("Tame") && nbt.getBoolean("Tame"));
     }
 
     @Override
